@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SpringBootTest
-class database_test {
+class TableTest {
 
     @Autowired
     private DataSource dataSource;
