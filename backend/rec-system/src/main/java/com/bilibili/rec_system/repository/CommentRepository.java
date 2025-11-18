@@ -24,4 +24,5 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     @Query("SELECT DISTINCT c.userId FROM Comment c WHERE c.videoId IN :videoIds AND c.userId <> :userId")
     List<Long> findUsersWhoCommentedOnVideos(@Param("videoIds") List<Long> videoIds, @Param("userId") Long userId);
+
 }
