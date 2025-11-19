@@ -2,6 +2,11 @@
 // BaseUserDTO.java
 package com.bilibili.rec_system.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class BaseDTO {
     protected Long userId;
     protected String username;
@@ -16,13 +21,4 @@ public class BaseDTO {
         this.avatarPath = avatarPath;
     }
 
-    // getters and setters
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public String getAvatarPath() { return avatarPath; }
-    public void setAvatarPath(String avatarPath) { this.avatarPath = avatarPath; }
 }

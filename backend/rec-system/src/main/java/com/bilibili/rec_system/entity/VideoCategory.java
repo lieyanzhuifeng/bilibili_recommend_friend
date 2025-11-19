@@ -8,8 +8,7 @@ import lombok.Data;
 @Data
 public class VideoCategory {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "categoryID")
+    @Column(name = "categoryID")  // 去掉 @GeneratedValue，因为categoryID是业务主键
     private Long categoryId;
 
     @Column(name = "categoryName", length = 100)

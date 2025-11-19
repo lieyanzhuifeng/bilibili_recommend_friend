@@ -1,9 +1,7 @@
 // CoCommentRecommendationController.java
 package com.bilibili.rec_system.controller;
 
-import com.bilibili.rec_system.dto.BaseDTO;
-import com.bilibili.rec_system.dto.CoCommentRecommendationDTO;
-import com.bilibili.rec_system.dto.SharedVideoRecommendationDTO;
+import com.bilibili.rec_system.dto.*;
 import com.bilibili.rec_system.service.RecommendationService;
 import com.bilibili.rec_system.service.RecommendationServiceImpl.RecommendationServiceFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,5 +56,30 @@ public class CoCommentRecommendationController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取分区重合度推荐用户
+     */
+    @GetMapping("/category/{userId}")
+    public List<CategoryRecommendationDTO> getCategoryRecommendations(@PathVariable Long userId) {
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("category");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+        return baseResult.stream()
+                .map(dto -> (CategoryRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取内容类型重合度推荐用户
+     */
+    @GetMapping("/theme/{userId}")
+    public List<ThemeRecommendationDTO> getThemeRecommendations(@PathVariable Long userId) {
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("theme");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+        return baseResult.stream()
+                .map(dto -> (ThemeRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
 
 }

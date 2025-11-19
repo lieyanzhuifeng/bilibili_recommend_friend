@@ -1,5 +1,10 @@
 package com.bilibili.rec_system.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class SharedVideoRecommendationDTO extends BaseDTO {
     private Double similarityRate;  // 观看视频相似度
 
@@ -10,7 +15,4 @@ public class SharedVideoRecommendationDTO extends BaseDTO {
         this.similarityRate = similarityRate;
     }
 
-    // getters and setters
-    public Double getSimilarityRate() { return similarityRate; }
-    public void setSimilarityRate(Double similarityRate) { this.similarityRate = similarityRate; }
 }

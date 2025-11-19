@@ -1,7 +1,6 @@
 package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
-import com.bilibili.rec_system.dto.ReplyRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.repository.CommentRepository;
 import com.bilibili.rec_system.repository.UserRepository;
