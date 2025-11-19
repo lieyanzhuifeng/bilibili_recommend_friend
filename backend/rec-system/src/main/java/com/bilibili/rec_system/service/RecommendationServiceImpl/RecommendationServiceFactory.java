@@ -9,14 +9,17 @@ public class RecommendationServiceFactory {
 
     @Autowired
     private ReplyRecommendationService replyRecommendationService;
-
     @Autowired
     private CoCommentRecommendationService coCommentRecommendationService;
+    @Autowired
+    SharedVideoRecommendationService sharedVideoRecommendationService;
+
 
     public RecommendationService getRecommendationService(String type) {
-        return switch (type) {
+        return (RecommendationService) switch (type) {
             case "reply" -> replyRecommendationService;
             case "co_comment" -> coCommentRecommendationService;
+            case "shared_video_recommendation" ->sharedVideoRecommendationService;
             default -> throw new IllegalArgumentException("不支持的推荐类型: " + type);
         };
     }

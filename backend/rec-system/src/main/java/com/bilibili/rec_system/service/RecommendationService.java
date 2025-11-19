@@ -1,9 +1,9 @@
+// RecommendationService.java
 package com.bilibili.rec_system.service;
 
-import com.bilibili.rec_system.entity.User;
-
+import com.bilibili.rec_system.dto.BaseDTO;
 import java.util.List;
 
 public interface RecommendationService {
-    List<User> recommendUsers(Long userId);
+    List<BaseDTO> recommendUsers(Long userId);
 }
