@@ -13,6 +13,63 @@ import java.util.Optional;
 public interface UserUpStatsRepository extends JpaRepository<UserUpStats, Long> {
 
     /**
+     * 根据UP主ID和时长范围查找 - 使用投影
+     */
+    @Query(value = "SELECT " +
+            "upStatID as upStatId, " +
+            "userID as userId, " +
+            "upID as upId, " +
+            "TIME_FORMAT(totalWatchDuration, '%H:%i:%s') as totalWatchStr, " +
+            "uniqueVideos as uniqueVideos " +
+            "FROM user_up_stats WHERE upID = :upId AND totalWatchDuration BETWEEN :minSeconds AND :maxSeconds",
+            nativeQuery = true)
+    List<UserUpStatsProjection> findByUpIdAndDurationRange(@Param("upId") Long upId,
+                                                           @Param("minSeconds") Long minSeconds,
+                                                           @Param("maxSeconds") Long maxSeconds);
+
+    /**
+     * 根据UP主ID和最小时长查找 - 使用投影
+     */
+    @Query(value = "SELECT " +
+            "upStatID as upStatId, " +
+            "userID as userId, " +
+            "upID as upId, " +
+            "TIME_FORMAT(totalWatchDuration, '%H:%i:%s') as totalWatchStr, " +
+            "uniqueVideos as uniqueVideos " +
+            "FROM user_up_stats WHERE upID = :upId AND totalWatchDuration >= :minSeconds",
+            nativeQuery = true)
+    List<UserUpStatsProjection> findByUpIdAndMinDuration(@Param("upId") Long upId,
+                                                         @Param("minSeconds") Long minSeconds);
+
+    /**
+     * 根据时长范围查找所有用户 - 使用投影
+     */
+    @Query(value = "SELECT " +
+            "upStatID as upStatId, " +
+            "userID as userId, " +
+            "upID as upId, " +
+            "TIME_FORMAT(totalWatchDuration, '%H:%i:%s') as totalWatchStr, " +
+            "uniqueVideos as uniqueVideos " +
+            "FROM user_up_stats WHERE totalWatchDuration BETWEEN :minSeconds AND :maxSeconds",
+            nativeQuery = true)
+    List<UserUpStatsProjection> findByDurationRange(@Param("minSeconds") Long minSeconds,
+                                                    @Param("maxSeconds") Long maxSeconds);
+
+    /**
+     * 根据最小时长查找所有用户 - 使用投影
+     */
+    @Query(value = "SELECT " +
+            "upStatID as upStatId, " +
+            "userID as userId, " +
+            "upID as upId, " +
+            "TIME_FORMAT(totalWatchDuration, '%H:%i:%s') as totalWatchStr, " +
+            "uniqueVideos as uniqueVideos " +
+            "FROM user_up_stats WHERE totalWatchDuration >= :minSeconds",
+            nativeQuery = true)
+    List<UserUpStatsProjection> findByMinDuration(@Param("minSeconds") Long minSeconds);
+
+
+    /**
      * 获取所有数据 - 使用投影
      */
     @Query(value = "SELECT " +

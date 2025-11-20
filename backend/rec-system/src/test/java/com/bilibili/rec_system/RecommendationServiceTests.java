@@ -5,6 +5,10 @@ import com.bilibili.rec_system.dto.CoCommentRecommendationDTO;
 import com.bilibili.rec_system.dto.SharedVideoRecommendationDTO;
 import com.bilibili.rec_system.dto.CategoryRecommendationDTO;
 import com.bilibili.rec_system.dto.ThemeRecommendationDTO;
+import com.bilibili.rec_system.dto.SameUpRecommendationDTO;
+
+import com.bilibili.rec_system.dto.filter.FilterBaseDTO;
+import com.bilibili.rec_system.dto.filter.SameUpFilterDTO;
 
 
 import com.bilibili.rec_system.entity.UserTopCategory;
@@ -16,15 +20,16 @@ import com.bilibili.rec_system.repository.UserTopCategoryRepository;
 import com.bilibili.rec_system.repository.VideoThemeRepository;
 
 import com.bilibili.rec_system.service.RecommendationService;
-
+import com.bilibili.rec_system.service.FilterService;
 import com.bilibili.rec_system.service.RecommendationServiceImpl.RecommendationServiceFactory;
-
+import com.bilibili.rec_system.service.FilterServiceImpl.FilterServiceFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +37,9 @@ import java.util.stream.Collectors;
 
 @SpringBootTest
 public class RecommendationServiceTests {
+
+    @Autowired
+    private FilterServiceFactory filterServiceFactory;
 
     @Autowired
     private RecommendationServiceFactory recommendationServiceFactory;
@@ -274,6 +282,76 @@ public class RecommendationServiceTests {
         List<UserTopTheme> userThemes = userTopThemeRepository.findTop3ByUserId(userId);
         System.out.println("用户" + userId + "的主题偏好数量: " + userThemes.size());
     }
+
+
+    @Test
+    void testSameUpFilter() {
+        System.out.println("=== 测试同一UP主筛选功能 ===");
+
+        FilterService filterService = filterServiceFactory.getFilterService("same_up");
+
+        // 测试UP主ID为11，测试所有时长选项
+        for (int option = 0; option <= 4; option++) {
+            testSameUpFilterWithOption(11L, option, filterService);
+        }
+    }
+
+    private void testSameUpFilterWithOption(Long upId, Integer option, FilterService filterService) {
+        SameUpFilterDTO filter = new SameUpFilterDTO(upId, option);
+
+        List<BaseDTO> baseResult = filterService.filterUsers(filter);
+        List<SameUpRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (SameUpRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        String optionDesc = getOptionDescription(option);
+        System.out.println("\nUP主" + upId + " - 选项[" + optionDesc + "]: " + dtoResult.size() + "个用户");
+
+        // 逐个打印DTO字段
+        if (!dtoResult.isEmpty()) {
+            System.out.println("=== 推荐用户详情 ===");
+            for (int i = 0; i < dtoResult.size(); i++) {
+                SameUpRecommendationDTO dto = dtoResult.get(i);
+                System.out.println("用户 " + (i + 1) + ":");
+                System.out.println("  userId: " + dto.getUserId());
+                System.out.println("  username: " + dto.getUsername());
+                System.out.println("  avatarPath: " + dto.getAvatarPath());
+                System.out.println("  upName: " + dto.getUpName());
+
+                if (dto.getTotalWatchDuration() != null) {
+                    Duration duration = dto.getTotalWatchDuration();
+                    System.out.println("  totalWatchDuration: " + duration.toString());
+                    System.out.println("  总分钟数: " + duration.toMinutes() + "分钟");
+
+                    // 格式化为易读的时间
+                    long hours = duration.toHours();
+                    long minutes = duration.toMinutes() % 60;
+                    long seconds = duration.getSeconds() % 60;
+                    System.out.println("  格式化时间: " + hours + "小时" + minutes + "分钟" + seconds + "秒");
+                } else {
+                    System.out.println("  totalWatchDuration: null");
+                }
+                System.out.println("---");
+            }
+        } else {
+            System.out.println("❌ 没有找到符合条件的用户");
+        }
+    }
+
+    private String getOptionDescription(Integer option) {
+        switch (option) {
+            case -1: return "全部";
+            case 0: return "0-10分钟";
+            case 1: return "10-50分钟";
+            case 2: return "50-100分钟";
+            case 3: return "100-200分钟";
+            case 4: return "200分钟以上";
+            default: return "未知";
+        }
+    }
+
+
+
 
 
 }
