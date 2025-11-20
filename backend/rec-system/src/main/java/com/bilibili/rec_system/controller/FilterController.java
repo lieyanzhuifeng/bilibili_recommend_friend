@@ -82,7 +82,54 @@ public class FilterController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 关注时间缘分推荐
+     */
+    @GetMapping("/follow-time")
+    public List<FollowTimeRecommendationDTO> getFollowTimeRecommendations(
+            @RequestParam Long userId,
+            @RequestParam Long upId) {
 
+        FollowTimeFilterDTO filter = new FollowTimeFilterDTO(userId, upId);
+        FilterService service = filterServiceFactory.getFilterService("follow_time");
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+
+        return baseResult.stream()
+                .map(dto -> (FollowTimeRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 夜猫子用户筛选
+     */
+    @GetMapping("/night-owl")
+    public List<NightOwlRecommendationDTO> getNightOwlRecommendations(
+            @RequestParam String option) {
+
+        NightOwlFilterDTO filter = new NightOwlFilterDTO(option);
+        FilterService service = filterServiceFactory.getFilterService("night_owl");
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+
+        return baseResult.stream()
+                .map(dto -> (NightOwlRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 用户活跃度筛选
+     */
+    @GetMapping("/user-activity")
+    public List<UserActivityRecommendationDTO> getUserActivityRecommendations(
+            @RequestParam String option) {
+
+        UserActivityFilterDTO filter = new UserActivityFilterDTO(option);
+        FilterService service = filterServiceFactory.getFilterService("user_activity");
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+
+        return baseResult.stream()
+                .map(dto -> (UserActivityRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
 
 
 }

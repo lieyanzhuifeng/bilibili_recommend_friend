@@ -8,12 +8,9 @@ import java.math.BigDecimal;
 @Table(name = "user_statistics")
 @Data
 public class UserStatistics {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "statID")
-    private Long statId;
 
-    @Column(name = "userID")
+    @Id
+    @Column(name = "userID")  // 使用userID作为主键
     private Long userId;
 
     @Column(name = "totalWatchHours", precision = 10, scale = 2)
@@ -37,9 +34,6 @@ public class UserStatistics {
     @Column(name = "nightWatchMinutes")
     private Integer nightWatchMinutes = 0;
 
-    @Column(name = "mainCategoryID")
-    private Long mainCategoryId;
-
-    @Column(name = "mainUPID")
-    private Long mainUpId;
+    @Column(name = "nightWatchDays")
+    private Integer nightWatchDays = 0;
 }

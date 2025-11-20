@@ -11,18 +11,24 @@ import java.util.List;
 
 @Repository
 public interface UserFollowUpRepository extends JpaRepository<UserFollowUp, Long> {
+    // 根据upID和userID和指定时间差范围查找用户
+    @Query("SELECT ufu.userId FROM UserFollowUp ufu " +
+            "WHERE ufu.upId = :upId " +
+            "AND ufu.userId <> :currentUserId " +
+            "AND ABS(DATEDIFF(ufu.followTime, (SELECT ufu2.followTime FROM UserFollowUp ufu2 WHERE ufu2.userId = :currentUserId AND ufu2.upId = :upId))) BETWEEN :minDays AND :maxDays")
+    List<Long> findUsersWithFollowTimeInRange(@Param("currentUserId") Long currentUserId,
+                                              @Param("upId") Long upId,
+                                              @Param("minDays") Integer minDays,
+                                              @Param("maxDays") Integer maxDays);
 
-    // 3.3 关注交集推荐
-    @Query("SELECT ufu.upId FROM UserFollowUp ufu WHERE ufu.userId = :userId")
-    List<Long> findFollowedUPsByUser(@Param("userId") Long userId);
 
-    @Query("SELECT ufu.userId FROM UserFollowUp ufu WHERE ufu.upId IN :upIds AND ufu.userId <> :userId GROUP BY ufu.userId HAVING COUNT(ufu.upId) > 0")
-    List<Long> findUsersWithCommonFollows(@Param("upIds") List<Long> upIds, @Param("userId") Long userId);
+    // 根据userID和upID计算关注天数（从关注日期到现在的天数）
+    @Query("SELECT DATEDIFF(CURRENT_DATE, ufu.followTime) FROM UserFollowUp ufu WHERE ufu.userId = :userId AND ufu.upId = :upId")
+    Integer findFollowDaysByUserAndUP(@Param("userId") Long userId, @Param("upId") Long upId);
 
-    // 3.7 关注时间缘分
-    @Query("SELECT ufu FROM UserFollowUp ufu WHERE ufu.upId = :upId AND ufu.followTime = :followDate AND ufu.userId <> :userId")
-    List<UserFollowUp> findUsersWithSameFollowDate(@Param("upId") Long upId, @Param("followDate") LocalDate followDate, @Param("userId") Long userId);
+    // 查找关注了某个UP主的所有其他用户
+    @Query("SELECT ufu.userId FROM UserFollowUp ufu WHERE ufu.upId = :upId AND ufu.userId <> :excludeUserId")
+    List<Long> findUsersByUpIdExcludingUser(@Param("upId") Long upId, @Param("excludeUserId") Long excludeUserId);
 
-    @Query("SELECT ufu.followTime FROM UserFollowUp ufu WHERE ufu.userId = :userId AND ufu.upId = :upId")
-    LocalDate findFollowTimeByUserAndUP(@Param("userId") Long userId, @Param("upId") Long upId);
+
 }

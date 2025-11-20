@@ -18,6 +18,8 @@ public class RecommendationServiceFactory {
     CategoryRecommendationService categoryRecommendationService;
     @Autowired
     ThemeRecommendationService themeRecommendationService;
+    @Autowired
+    private UserBehaviorRecommendationService userBehaviorRecommendationService;
 
     public RecommendationService getRecommendationService(String type) {
         return (RecommendationService) switch (type) {
@@ -26,6 +28,8 @@ public class RecommendationServiceFactory {
             case "shared_video_recommendation" ->sharedVideoRecommendationService;
             case "category" -> categoryRecommendationService;
             case "theme" -> themeRecommendationService;
+            case "user_behavior" -> userBehaviorRecommendationService;
+
             default -> throw new IllegalArgumentException("不支持的推荐类型: " + type);
         };
     }

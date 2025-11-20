@@ -45,6 +45,12 @@ public class RecommendationServiceTests {
     @Autowired
     private VideoThemeRepository videoThemeRepository;
 
+    @Autowired
+    private UserFollowUpRepository userFollowUpRepository;
+
+    @Autowired
+    private UserStatisticsRepository userStatisticsRepository;
+
     //在同一个视频下评论
     @Test
     void testCoCommentRecommendation() {
@@ -439,6 +445,174 @@ public class RecommendationServiceTests {
             default -> "未知";
         };
     }
+
+    //输入用户id（前端需要保证只能输入本登录用户的id）和upid返回关注该up时间相近的用户
+    @Test
+    void testFollowTimeRecommendation() {
+        System.out.println("=== 测试关注时间缘分推荐功能 ===");
+
+        Long upId = 11L;
+
+        for (long userId = 1; userId <= 10; userId++) {
+            testSingleUserFollowTimeRecommendation(userId, upId);
+        }
+    }
+
+    private void testSingleUserFollowTimeRecommendation(Long userId, Long upId) {
+        System.out.println("\n--- 测试用户ID: " + userId + " 对UP主ID: " + upId + " ---");
+
+        // 使用工厂获取服务
+        FilterService service = filterServiceFactory.getFilterService("follow_time");
+
+        // 创建过滤器
+        FollowTimeFilterDTO filter = new FollowTimeFilterDTO(userId, upId);
+
+        // 调用服务
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+
+        // 向下转型为具体类型
+        List<FollowTimeRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (FollowTimeRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        // 使用JSON格式打印结果
+        System.out.println("关注时间缘分推荐结果: ");
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+            System.out.println(jsonResult);
+        } catch (Exception e) {
+            System.out.println(dtoResult);
+        }
+
+        System.out.println("推荐用户数量: " + dtoResult.size());
+
+        // 显示统计信息
+        if (!dtoResult.isEmpty()) {
+            double avgScore = dtoResult.stream()
+                    .mapToInt(FollowTimeRecommendationDTO::getRecommendationScore)
+                    .average()
+                    .orElse(0.0);
+            System.out.println("平均推荐分数: " + String.format("%.2f", avgScore));
+
+            // 显示前3个最高分用户
+            System.out.println("最高分推荐用户:");
+            for (int i = 0; i < Math.min(3, dtoResult.size()); i++) {
+                FollowTimeRecommendationDTO dto = dtoResult.get(i);
+                System.out.println("  " + (i+1) + ". 用户" + dto.getUserId() + " - 分数:" + dto.getRecommendationScore());
+                System.out.println("     理由: " + dto.getRecommendationReason());
+            }
+        } else {
+            System.out.println("❌ 没有找到有缘分的用户");
+        }
+
+        // 验证当前用户是否关注了该UP主
+        Integer userFollowDays = userFollowUpRepository.findFollowDaysByUserAndUP(userId, upId);
+        if (userFollowDays != null) {
+            System.out.println("用户" + userId + "已关注该UP主 " + userFollowDays + " 天");
+        } else {
+            System.out.println("⚠️ 用户" + userId + "未关注该UP主");
+        }
+    }
+
+    //输入userid推荐看视频习惯（完播率收藏率等等）的相似度
+    @Test
+    void testUserBehaviorRecommendationForUsers1To10() {
+        System.out.println("=== 测试1-10号用户的行为相似度推荐 ===\n");
+
+        for (long userId = 1; userId <= 10; userId++) {
+            testUserBehaviorForUser(userId);
+        }
+    }
+
+    private void testUserBehaviorForUser(Long userId) {
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("user_behavior");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+        List<UserBehaviorRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (UserBehaviorRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        System.out.println("用户" + userId + "的推荐结果: ");
+
+        // 直接打印DTO
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+            System.out.println(jsonResult);
+        } catch (Exception e) {
+            System.out.println(dtoResult);
+        }
+
+        System.out.println("推荐用户数量: " + dtoResult.size());
+        System.out.println();
+    }
+
+    //输入option根据夜间看视频情况筛选用户
+    @Test
+    void testNightOwlRecommendation() {
+        System.out.println("=== 测试夜猫子筛选 ===");
+
+        String[] levels = {"non_owl", "light_owl", "medium_owl", "heavy_owl"};
+
+        for (String level : levels) {
+            FilterService service = filterServiceFactory.getFilterService("night_owl");
+            NightOwlFilterDTO filter = new NightOwlFilterDTO(level);
+            List<BaseDTO> result = service.filterUsers(filter);
+
+            System.out.println(level + ": " + result.size() + "个用户");
+
+            // 使用JSON格式打印
+            if (!result.isEmpty()) {
+                List<NightOwlRecommendationDTO> dtoResult = result.stream()
+                        .map(dto -> (NightOwlRecommendationDTO) dto)
+                        .collect(Collectors.toList());
+
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                    System.out.println(json);
+                } catch (Exception e) {
+                    System.out.println(dtoResult);
+                }
+            }
+            System.out.println();
+        }
+    }
+
+    //输入option根据夜间看视频情况筛选轻度中度重度b站使用用户
+    @Test
+    void testUserActivityRecommendation() {
+        System.out.println("=== 测试用户活跃度筛选 ===");
+
+        String[] levels = {"light_user", "medium_user", "heavy_user"};
+
+        for (String level : levels) {
+            FilterService service = filterServiceFactory.getFilterService("user_activity");
+            UserActivityFilterDTO filter = new UserActivityFilterDTO(level);
+            List<BaseDTO> result = service.filterUsers(filter);
+
+            System.out.println(level + ": " + result.size() + "个用户");
+
+            // 转换为具体类型并打印JSON
+            if (!result.isEmpty()) {
+                List<UserActivityRecommendationDTO> dtoResult = result.stream()
+                        .map(dto -> (UserActivityRecommendationDTO) dto)
+                        .collect(Collectors.toList());
+
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                    System.out.println(json);
+                } catch (Exception e) {
+                    System.out.println(dtoResult);
+                }
+            }
+            System.out.println();
+        }
+    }
+
+
+
 
 
 }

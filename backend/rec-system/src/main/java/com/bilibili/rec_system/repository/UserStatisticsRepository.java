@@ -11,13 +11,14 @@ import java.util.List;
 @Repository
 public interface UserStatisticsRepository extends JpaRepository<UserStatistics, Long> {
 
+    /**
+     * 根据用户ID获取用户统计信息（userID是主键）
+     */
     UserStatistics findByUserId(Long userId);
 
-    // 3.4 行为相似度推荐
-    @Query("SELECT us FROM UserStatistics us WHERE us.userId <> :userId")
-    List<UserStatistics> findAllExceptUser(@Param("userId") Long userId);
-
-    // 3.5 夜猫子推荐
-    @Query("SELECT us.userId FROM UserStatistics us WHERE us.userId <> :userId ORDER BY ABS(us.nightWatchMinutes - :targetMinutes) ASC, ABS(us.activeDays - :targetDays) ASC")
-    List<Long> findSimilarNightOwlUsers(@Param("userId") Long userId, @Param("targetMinutes") Integer targetMinutes, @Param("targetDays") Integer targetDays);
+    /**
+     * 获取所有其他用户的统计信息
+     */
+    @Query("SELECT us FROM UserStatistics us WHERE us.userId <> :excludeUserId")
+    List<UserStatistics> findAllExcludingUser(@Param("excludeUserId") Long excludeUserId);
 }

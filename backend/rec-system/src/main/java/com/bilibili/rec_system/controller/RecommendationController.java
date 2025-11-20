@@ -82,4 +82,17 @@ public class RecommendationController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 用户行为相似度推荐
+     */
+    @GetMapping("/user-behavior/{userId}")
+    public List<UserBehaviorRecommendationDTO> getUserBehaviorRecommendations(@PathVariable Long userId) {
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("user_behavior");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+        return baseResult.stream()
+                .map(dto -> (UserBehaviorRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
 }
