@@ -11,11 +11,15 @@ public class FilterServiceFactory {
 
     @Autowired
     private SameUpRecommendationService sameUpRecommendationService;
-    // 可以继续添加其他筛选服务
-    // @Autowired
-    // private CategoryFilterService categoryFilterService;
-    // @Autowired
-    // private DurationFilterService durationFilterService;
+
+    @Autowired
+    private SameTagRecommendationService sameTagRecommendationService;
+
+    @Autowired
+    private SameUpVideoCountService sameUpVideoCountService;
+
+    @Autowired
+    private SameTagVideoCountService sameTagVideoCountService;
 
     /**
      * 根据筛选类型获取对应的筛选服务
@@ -25,20 +29,11 @@ public class FilterServiceFactory {
     public FilterService getFilterService(String filterType) {
         return switch (filterType) {
             case "same_up" -> sameUpRecommendationService;
-            // case "category" -> categoryFilterService;
-            // case "duration" -> durationFilterService;
+            case "same_tag" -> sameTagRecommendationService;
+            case "same_up_video_count" -> sameUpVideoCountService;
+            case "same_tag_video_count" -> sameTagVideoCountService;
             default -> throw new IllegalArgumentException("不支持的筛选类型: " + filterType);
         };
     }
 
-    /**
-     * 获取所有可用的筛选类型
-     */
-    public Map<String, String> getAvailableFilterTypes() {
-        return Map.of(
-                "same_up", "同一UP主筛选"
-                // "category", "分区筛选",
-                // "duration", "时长筛选"
-        );
-    }
 }

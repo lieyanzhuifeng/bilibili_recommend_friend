@@ -19,14 +19,11 @@ public class UserUpStats {
     @Column(name = "upID")
     private Long upId;
 
+    // 可以直接使用小时数进行比较
     @Transient  // 临时字段，存储小时数
     private Double watchHours;
 
     @Column(name = "uniqueVideos")
     private Integer uniqueVideos = 0;
 
-    // 可以直接使用小时数进行比较
-    public Double getWatchHours() {
-        return watchHours;
-    }
 }

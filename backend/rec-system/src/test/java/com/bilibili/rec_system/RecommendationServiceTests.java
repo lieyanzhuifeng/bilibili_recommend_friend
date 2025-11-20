@@ -1,28 +1,14 @@
 package com.bilibili.rec_system;
 
-import com.bilibili.rec_system.dto.BaseDTO;
-import com.bilibili.rec_system.dto.CoCommentRecommendationDTO;
-import com.bilibili.rec_system.dto.SharedVideoRecommendationDTO;
-import com.bilibili.rec_system.dto.CategoryRecommendationDTO;
-import com.bilibili.rec_system.dto.ThemeRecommendationDTO;
-import com.bilibili.rec_system.dto.SameUpRecommendationDTO;
-
-import com.bilibili.rec_system.dto.filter.FilterBaseDTO;
-import com.bilibili.rec_system.dto.filter.SameUpFilterDTO;
-
-
-import com.bilibili.rec_system.entity.UserTopCategory;
-import com.bilibili.rec_system.entity.UserTopTheme;
-import com.bilibili.rec_system.repository.CommentRepository;
-import com.bilibili.rec_system.repository.UserRepository;
-import com.bilibili.rec_system.repository.UserTopThemeRepository;
-import com.bilibili.rec_system.repository.UserTopCategoryRepository;
-import com.bilibili.rec_system.repository.VideoThemeRepository;
-
-import com.bilibili.rec_system.service.RecommendationService;
-import com.bilibili.rec_system.service.FilterService;
+import com.bilibili.rec_system.dto.*;
+import com.bilibili.rec_system.dto.filter.*;
+import com.bilibili.rec_system.entity.*;
+import com.bilibili.rec_system.repository.*;
+import com.bilibili.rec_system.service.*;
 import com.bilibili.rec_system.service.RecommendationServiceImpl.RecommendationServiceFactory;
 import com.bilibili.rec_system.service.FilterServiceImpl.FilterServiceFactory;
+
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -283,7 +269,7 @@ public class RecommendationServiceTests {
         System.out.println("用户" + userId + "的主题偏好数量: " + userThemes.size());
     }
 
-
+    //输入upID和选项 筛选符合条件的用户及他们观看该up的总时长
     @Test
     void testSameUpFilter() {
         System.out.println("=== 测试同一UP主筛选功能 ===");
@@ -331,8 +317,128 @@ public class RecommendationServiceTests {
         }
     }
 
+    //输入tagID和选项 输出符合条件的用户及他们观看该tag的总时长
+    @Test
+    void testSameTagRecommendation() {
+        System.out.println("=== 测试同一标签推荐功能 ===");
+
+        FilterService service = filterServiceFactory.getFilterService("same_tag");
+
+        // 测试不同标签
+        testTagRecommendation(1L, service);
+    }
+
+    private void testTagRecommendation(Long tagId, FilterService service) {
+        System.out.println("\n--- 测试标签ID: " + tagId + " ---");
+
+        // 直接使用常量，避免类型转换
+        Map<Integer, String> durationLevels = Map.of(
+                -1, "全部",
+                0, "0-1小时",
+                1, "1-3小时",
+                2, "3-10小时",
+                3, "10-30小时",
+                4, "30小时以上"
+        );
+
+        for (int option = -1; option <= 4; option++) {
+            SameTagFilterDTO filter = new SameTagFilterDTO(tagId, option);
+            List<BaseDTO> baseResult = service.filterUsers(filter);
+            List<SameTagRecommendationDTO> dtoResult = baseResult.stream()
+                    .map(dto -> (SameTagRecommendationDTO) dto)
+                    .collect(Collectors.toList());
+
+            String optionDesc = durationLevels.get(option);
+            System.out.println("标签" + tagId + " - 时长等级[" + optionDesc + "]: " + dtoResult.size() + "个推荐用户");
+
+            if (!dtoResult.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    String jsonResult = mapper.writerWithDefaultPrettyPrinter()
+                            .writeValueAsString(dtoResult.subList(0, Math.min(3, dtoResult.size())));
+                    System.out.println(jsonResult);
+                } catch (Exception e) {
+                    System.out.println(dtoResult.subList(0, Math.min(3, dtoResult.size())));
+                }
+            }
+        }
+    }
 
 
+    //输入upID和选项 筛选符合条件的用户及他们观看该up的视频个数
+    @Test
+    void testSameUpVideoCountForUp11() {
+        System.out.println("=== 测试UP主11的视频观看比例筛选 ===");
+
+        FilterService service = filterServiceFactory.getFilterService("same_up_video_count");
+
+        // 直接使用常量
+        Map<Integer, String> ratioLevels = Map.of(
+                0, "0-20%", 1, "20-40%", 2, "40-60%", 3, "60-80%", 4, "80-100%"
+        );
+
+        for (int option = 0; option <= 4; option++) {
+            SameUpVideoCountFilterDTO filter = new SameUpVideoCountFilterDTO(11L, option);
+            List<BaseDTO> baseResult = service.filterUsers(filter);
+            List<SameUpVideoCountDTO> dtoResult = baseResult.stream()
+                    .map(dto -> (SameUpVideoCountDTO) dto)
+                    .collect(Collectors.toList());
+
+            String optionDesc = ratioLevels.get(option);
+            System.out.println("\nUP主11 - 观看比例[" + optionDesc + "]: " + dtoResult.size() + "个推荐用户");
+
+            if (!dtoResult.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                    System.out.println(jsonResult);
+                } catch (Exception e) {
+                    System.out.println(dtoResult);
+                }
+            }
+        }
+    }
+
+    //输入tagID和选项 筛选符合条件的用户及他们观看该tag的视频个数
+    @Test
+    void testSameTagVideoCountForTag1() {
+        System.out.println("=== 测试标签1的视频观看比例筛选 ===");
+
+        FilterService service = filterServiceFactory.getFilterService("same_tag_video_count");
+
+        // 测试所有比例选项
+        for (int option = 0; option <= 4; option++) {
+            SameTagVideoCountFilterDTO filter = new SameTagVideoCountFilterDTO(1L, option);
+            List<BaseDTO> baseResult = service.filterUsers(filter);
+            List<SameTagVideoCountDTO> dtoResult = baseResult.stream()
+                    .map(dto -> (SameTagVideoCountDTO) dto)
+                    .collect(Collectors.toList());
+
+            String optionDesc = getRatioDescription(option);
+            System.out.println("\n标签1 - 观看比例[" + optionDesc + "]: " + dtoResult.size() + "个推荐用户");
+
+            if (!dtoResult.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                    System.out.println(jsonResult);
+                } catch (Exception e) {
+                    System.out.println(dtoResult);
+                }
+            }
+        }
+    }
+
+    private String getRatioDescription(int option) {
+        return switch (option) {
+            case 0 -> "0-20%";
+            case 1 -> "20-40%";
+            case 2 -> "40-60%";
+            case 3 -> "60-80%";
+            case 4 -> "80-100%";
+            default -> "未知";
+        };
+    }
 
 
 }

@@ -17,4 +17,10 @@ public interface TagVideoRepository extends JpaRepository<TagVideo, Long> {
 
     @Query("SELECT tv.videoId FROM TagVideo tv WHERE tv.tagId IN :tagIds")
     List<Long> findVideoIdsByTags(@Param("tagIds") List<Long> tagIds);
+
+    /**
+     * 根据标签ID返回该标签下的视频数量
+     */
+    @Query("SELECT COUNT(tv) FROM TagVideo tv WHERE tv.tagId = :tagId")
+    Long countVideosByTagId(@Param("tagId") Long tagId);
 }

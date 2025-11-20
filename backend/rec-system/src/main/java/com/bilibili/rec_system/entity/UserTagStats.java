@@ -18,8 +18,8 @@ public class UserTagStats {
     @Column(name = "tagID")
     private Long tagId;
 
-    @Column(name = "totalWatchDuration")
-    private Integer totalWatchDuration = 0;
+    @Transient
+    private Double watchHours;  // 小时数
 
     @Column(name = "uniqueVideos")
     private Integer uniqueVideos = 0;
