@@ -7,12 +7,11 @@ import com.bilibili.rec_system.dto.filter.SameUpFilterDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.entity.UserUpStats;
 import com.bilibili.rec_system.repository.UserRepository;
+import com.bilibili.rec_system.repository.UserUpStatsRepository;
 import com.bilibili.rec_system.service.FilterService;
-import com.bilibili.rec_system.service.UserUpStatsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -20,64 +19,67 @@ import java.util.stream.Collectors;
 public class SameUpRecommendationService implements FilterService {
 
     @Autowired
-    private UserUpStatsService userUpStatsService;  // 使用 Service 而不是 Repository
+    private UserUpStatsRepository userUpStatsRepository;
 
     @Autowired
     private UserRepository userRepository;
 
     @Override
     public List<BaseDTO> filterUsers(FilterBaseDTO filter) {
-        if (!(filter instanceof SameUpFilterDTO)) {
-            throw new IllegalArgumentException("筛选条件类型不匹配，期望: SameUpFilterDTO");
-        }
-
         SameUpFilterDTO sameUpFilter = (SameUpFilterDTO) filter;
         Long upId = sameUpFilter.getUpId();
         Integer durationOption = sameUpFilter.getDurationOption();
 
-        // 使用 UserUpStatsService 获取数据（已经包含 Duration 转换）
-        List<UserUpStats> upStatsList = userUpStatsService.findByUpId(upId);
+        // 获取UP主信息
+        User upUser = userRepository.findByUserId(upId);
+        if (upUser == null) return new ArrayList<>();
+        String upName = upUser.getUsername();
 
-        if (upStatsList.isEmpty()) {
-            return new ArrayList<>();
+        // 获取观看该UP主的用户
+        List<UserUpStats> upStatsList = userUpStatsRepository.findByUpId(upId);
+
+        List<SameUpRecommendationDTO> result = new ArrayList<>();
+
+        for (UserUpStats upStats : upStatsList) {
+            // 检查时长条件
+            if (!matchesDurationOption(upStats.getWatchHours(), durationOption)) {
+                continue;
+            }
+
+            // 获取用户信息
+            User user = userRepository.findByUserId(upStats.getUserId());
+            if (user == null) {
+                continue;
+            }
+
+            // 创建DTO
+            result.add(new SameUpRecommendationDTO(
+                    user.getUserId(),
+                    user.getUsername(),
+                    user.getAvatarPath(),
+                    upName,
+                    upStats.getWatchHours()
+            ));
         }
 
-        // 根据时长选项筛选并转换为DTO
-        return upStatsList.stream()
-                .filter(upStats -> matchesDurationOption(upStats.getTotalWatchDuration(), durationOption))
-                .map(upStats -> {
-                    User user = userRepository.findByUserId(upStats.getUserId());
-                    if (user != null) {
-                        return new SameUpRecommendationDTO(
-                                user.getUserId(),
-                                user.getUsername(),
-                                user.getAvatarPath(),
-                                "UP主" + upId,
-                                upStats.getTotalWatchDuration() // 直接使用已经转换好的 Duration
-                        );
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        // 排序
+        result.sort((a, b) -> Double.compare(b.getWatchHours(), a.getWatchHours()));
+
+        return new ArrayList<>(result);
     }
 
-    /**
-     * 检查观看时长是否符合筛选条件
-     */
-    private boolean matchesDurationOption(Duration duration, Integer durationOption) {
+    private boolean matchesDurationOption(Double watchHours, Integer durationOption) {
         if (durationOption == null || durationOption == -1) {
-            return true; // 返回所有
+            return true;
         }
-
-        long totalMinutes = duration.toMinutes();
+        if (watchHours == null) return false;
 
         switch (durationOption) {
-            case 0: return totalMinutes <= 10;     // 0-10分钟
-            case 1: return totalMinutes > 10 && totalMinutes <= 50;  // 10-50分钟
-            case 2: return totalMinutes > 50 && totalMinutes <= 100; // 50-100分钟
-            case 3: return totalMinutes > 100 && totalMinutes <= 200; // 100-200分钟
-            case 4: return totalMinutes > 200;     // 200分钟以上
+            case 0: return watchHours <= 1;      // 0-1小时
+            case 1: return watchHours > 1 && watchHours <= 3;   // 1-3小时
+            case 2: return watchHours > 3 && watchHours <= 10;  // 3-10小时
+            case 3: return watchHours > 10 && watchHours <= 30; // 10-30小时
+            case 4: return watchHours > 30;      // 30小时以上
             default: return true;
         }
     }

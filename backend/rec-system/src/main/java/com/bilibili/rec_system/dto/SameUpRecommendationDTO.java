@@ -8,17 +8,13 @@ import java.time.Duration;
 @Setter
 @Getter
 public class SameUpRecommendationDTO extends BaseDTO {
-    // getters and setters
-    private String upName;              // UP主名称
-    private Duration totalWatchDuration; // 观看总时长(分钟)
-
-    public SameUpRecommendationDTO() {}
+    private String upName;
+    private Double watchHours;  // 改为 Double 类型
 
     public SameUpRecommendationDTO(Long userId, String username, String avatarPath,
-                                   String upName, Duration totalWatchDuration) {
+                                   String upName, Double watchHours) {
         super(userId, username, avatarPath);
         this.upName = upName;
-        this.totalWatchDuration = totalWatchDuration;
+        this.watchHours = watchHours;
     }
-
 }

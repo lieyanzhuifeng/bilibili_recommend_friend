@@ -307,45 +307,26 @@ public class RecommendationServiceTests {
         String optionDesc = getOptionDescription(option);
         System.out.println("\nUP主" + upId + " - 选项[" + optionDesc + "]: " + dtoResult.size() + "个用户");
 
-        // 逐个打印DTO字段
-        if (!dtoResult.isEmpty()) {
-            System.out.println("=== 推荐用户详情 ===");
-            for (int i = 0; i < dtoResult.size(); i++) {
-                SameUpRecommendationDTO dto = dtoResult.get(i);
-                System.out.println("用户 " + (i + 1) + ":");
-                System.out.println("  userId: " + dto.getUserId());
-                System.out.println("  username: " + dto.getUsername());
-                System.out.println("  avatarPath: " + dto.getAvatarPath());
-                System.out.println("  upName: " + dto.getUpName());
-
-                if (dto.getTotalWatchDuration() != null) {
-                    Duration duration = dto.getTotalWatchDuration();
-                    System.out.println("  totalWatchDuration: " + duration.toString());
-                    System.out.println("  总分钟数: " + duration.toMinutes() + "分钟");
-
-                    // 格式化为易读的时间
-                    long hours = duration.toHours();
-                    long minutes = duration.toMinutes() % 60;
-                    long seconds = duration.getSeconds() % 60;
-                    System.out.println("  格式化时间: " + hours + "小时" + minutes + "分钟" + seconds + "秒");
-                } else {
-                    System.out.println("  totalWatchDuration: null");
-                }
-                System.out.println("---");
-            }
-        } else {
-            System.out.println("❌ 没有找到符合条件的用户");
+        // JSON格式打印结果
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+            System.out.println(jsonResult);
+        } catch (Exception e) {
+            System.err.println("JSON转换失败: " + e.getMessage());
+            // 降级显示
+            System.out.println("原始对象: " + dtoResult);
         }
     }
 
     private String getOptionDescription(Integer option) {
         switch (option) {
             case -1: return "全部";
-            case 0: return "0-10分钟";
-            case 1: return "10-50分钟";
-            case 2: return "50-100分钟";
-            case 3: return "100-200分钟";
-            case 4: return "200分钟以上";
+            case 0: return "0-1小时";
+            case 1: return "1-3小时";
+            case 2: return "3-10小时";
+            case 3: return "10-30小时";
+            case 4: return "30小时以上";
             default: return "未知";
         }
     }

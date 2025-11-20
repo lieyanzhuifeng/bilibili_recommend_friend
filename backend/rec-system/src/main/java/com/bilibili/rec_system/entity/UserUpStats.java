@@ -19,23 +19,14 @@ public class UserUpStats {
     @Column(name = "upID")
     private Long upId;
 
-    @Transient  // 标记为不持久化到数据库
-    private Duration totalWatchDuration = Duration.ZERO;
+    @Transient  // 临时字段，存储小时数
+    private Double watchHours;
 
     @Column(name = "uniqueVideos")
     private Integer uniqueVideos = 0;
 
-    // 便捷方法：获取格式化后的时长字符串
-    public String getFormattedDuration() {
-        if (totalWatchDuration == null) {
-            return "00:00:00";
-        }
-
-        long seconds = totalWatchDuration.getSeconds();
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-        long secs = seconds % 60;
-
-        return String.format("%02d:%02d:%02d", hours, minutes, secs);
+    // 可以直接使用小时数进行比较
+    public Double getWatchHours() {
+        return watchHours;
     }
 }
