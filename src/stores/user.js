@@ -5,7 +5,7 @@ export const useUserStore = defineStore('user', {
     userInfo: null,
     isAuthenticated: false
   }),
-  
+
   getters: {
     getUserInfo: (state) => state.userInfo,
     isLoggedIn: (state) => state.isAuthenticated,
@@ -13,7 +13,7 @@ export const useUserStore = defineStore('user', {
     userId: (state) => state.userInfo?.userId || null,
     avatar: (state) => state.userInfo?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
   },
-  
+
   actions: {
     // 设置用户信息
     setUserInfo(userInfo) {
@@ -21,7 +21,7 @@ export const useUserStore = defineStore('user', {
       this.isAuthenticated = true
       localStorage.setItem('user', JSON.stringify(userInfo))
     },
-    
+
     // 从localStorage加载用户信息
     loadUserInfo() {
       const userStr = localStorage.getItem('user')
@@ -30,13 +30,13 @@ export const useUserStore = defineStore('user', {
           const userInfo = JSON.parse(userStr)
           this.userInfo = userInfo
           this.isAuthenticated = true
-        } catch (error) {
-          console.error('Failed to parse user info from localStorage', error)
+        } catch (e) {
+          console.error('Failed to parse user info from localStorage', e)
           this.logout()
         }
       }
     },
-    
+
     // 更新用户信息
     updateUserInfo(updates) {
       if (this.userInfo) {
@@ -44,7 +44,7 @@ export const useUserStore = defineStore('user', {
         localStorage.setItem('user', JSON.stringify(this.userInfo))
       }
     },
-    
+
     // 登出
     logout() {
       this.userInfo = null

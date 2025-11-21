@@ -7,16 +7,16 @@
       </div>
       <div class="login-form">
         <div class="form-item">
-          <input 
-            v-model="username" 
-            type="text" 
+          <input
+            v-model="username"
+            type="text"
             placeholder="请输入用户名"
             class="form-input"
             @keyup.enter="handleLogin"
           />
         </div>
-        <button 
-          @click="handleLogin" 
+        <button
+          @click="handleLogin"
           class="login-btn"
           :disabled="!username.trim() || loading"
         >
@@ -35,11 +35,11 @@ import { useUserStore } from '../stores/user'
 import { useChatStore } from '../stores/chat'
 
 export default {
-  name: 'Login',
+  name: 'LoginPage',
   setup() {
     const userStore = useUserStore()
     const chatStore = useChatStore()
-    
+
     return {
       userStore,
       chatStore
@@ -54,13 +54,13 @@ export default {
   methods: {
     async handleLogin() {
       if (!this.username.trim() || this.loading) return
-      
+
       this.loading = true
-      
+
       try {
         // 模拟登录延迟
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         // 创建用户信息
         const userInfo = {
           username: this.username,
@@ -68,17 +68,17 @@ export default {
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.username}`,
           createdAt: new Date().toISOString()
         }
-        
+
         // 使用store管理用户状态
         this.userStore.setUserInfo(userInfo)
-        
-        // 初始化聊天模拟数据
-        this.chatStore.initMockData()
-        
+
+        // 初始化聊天数据
+        await this.chatStore.initData()
+
         // 跳转到个人主页
         this.$router.push('/profile')
-      } catch (error) {
-        console.error('登录失败:', error)
+      } catch (e) {
+        console.error('登录失败:', e)
         alert('登录失败，请重试')
       } finally {
         this.loading = false

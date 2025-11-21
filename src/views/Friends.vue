@@ -1,5 +1,8 @@
 <template>
   <div class="friends-container">
+    <!-- 好友申请通知 -->
+    <FriendRequests />
+    
     <div class="friends-header">
       <h1>我的好友</h1>
       <div class="header-actions">
@@ -12,9 +15,9 @@
           />
           <i class="search-icon">🔍</i>
         </div>
-        <Button type="primary" size="medium" @click="showAddFriendModal = true">
+        <CustomButton type="primary" size="medium" @click="showAddFriendModal = true">
           添加好友
-        </Button>
+        </CustomButton>
       </div>
     </div>
 
@@ -26,7 +29,7 @@
         @click="activeTab = 'all'"
       >
         全部好友
-        <span class="tab-count">({{ filteredFriends?.length || 0 }})</span>
+        <span class="tab-count">({{ (filteredFriends && filteredFriends.length) || 0 }})</span>
       </button>
       <button 
         class="tab-btn" 
@@ -34,7 +37,7 @@
         @click="activeTab = 'online'"
       >
         在线好友
-        <span class="tab-count">({{ onlineFriends?.length || 0 }})</span>
+        <span class="tab-count">({{ (onlineFriends && onlineFriends.length) || 0 }})</span>
       </button>
       <button 
         class="tab-btn" 
@@ -42,7 +45,7 @@
         @click="activeTab = 'unread'"
       >
         未读消息
-        <span class="tab-count">({{ unreadFriends?.length || 0 }})</span>
+        <span class="tab-count">({{ (unreadFriends && unreadFriends.length) || 0 }})</span>
       </button>
     </div>
 
@@ -68,21 +71,21 @@
           </div>
           
           <div class="friend-actions">
-            <Button 
+            <CustomButton 
               type="primary" 
               size="small" 
               @click="startChat(friend.id)"
               :disabled="friend.status !== 'online'"
             >
               {{ friend.status === 'online' ? '发消息' : '离线' }}
-            </Button>
-            <Button 
+            </CustomButton>
+            <CustomButton 
               type="outline" 
               size="small" 
               @click="viewProfile(friend.id)"
             >
               查看资料
-            </Button>
+            </CustomButton>
           </div>
         </div>
       </Card>
@@ -93,9 +96,9 @@
       <div class="empty-icon">👥</div>
       <h3>暂无好友</h3>
       <p>{{ getEmptyStateMessage() }}</p>
-      <Button v-if="activeTab === 'all'" type="primary" @click="showAddFriendModal = true">
+      <CustomButton v-if="activeTab === 'all'" type="primary" @click="showAddFriendModal = true">
         添加好友
-      </Button>
+      </CustomButton>
     </div>
 
     <!-- 添加好友弹窗 -->
@@ -129,14 +132,14 @@
                 <h4>{{ user.name }}</h4>
                 <p>UID: {{ user.id }}</p>
               </div>
-              <Button 
+              <CustomButton 
                 :type="isFriend(user.id) ? 'secondary' : 'primary'" 
                 size="small" 
                 :disabled="isFriend(user.id)"
                 @click="addFriend(user.id)"
               >
                 {{ isFriend(user.id) ? '已是好友' : '添加好友' }}
-              </Button>
+              </CustomButton>
             </div>
           </div>
           
@@ -158,14 +161,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
+import { searchUsers as searchUsersAPI } from '../services/api'
 import Card from '../components/Card.vue'
-import Button from '../components/Button.vue'
+import CustomButton from '../components/Button.vue'
+import FriendRequests from '../components/FriendRequests.vue'
 
 export default {
-  name: 'Friends',
+  name: 'FriendsList',
   components: {
     Card,
-    Button
+    CustomButton,
+    FriendRequests
   },
   setup() {
     const router = useRouter()
@@ -209,6 +215,8 @@ export default {
         try {
           return chatStore.getUnreadCount(friend.id) > 0
         } catch (e) {
+          // 忽略错误，返回false表示没有未读消息
+          console.warn('获取未读消息数失败:', e)
           return false
         }
       })
@@ -226,7 +234,7 @@ export default {
     })
 
     // 方法
-    const startChat = (userId) => {
+    const startChat = () => {
       // 根据路由配置，只导航到/chat页面，不传递userId参数
       router.push('/chat')
     }
@@ -254,6 +262,8 @@ export default {
     const viewProfile = (userId) => {
       // 这里可以实现查看好友个人资料的逻辑
       console.log('查看好友资料:', userId)
+      // 跳转到用户资料页面
+      router.push(`/profile/${userId}`)
     }
 
     const closeAddFriendModal = () => {
@@ -263,7 +273,7 @@ export default {
       searchError.value = ''
     }
 
-    const searchUsers = () => {
+    const searchUsers = async () => {
       if (!addFriendQuery.value.trim()) {
         searchError.value = '请输入搜索内容'
         return
@@ -273,49 +283,46 @@ export default {
       searchError.value = ''
       searchResults.value = []
 
-      // 模拟搜索延迟
-      setTimeout(() => {
-        // 模拟搜索结果
-        const mockResults = [
-          {
-            id: 1001,
-            name: '哔哩哔哩用户1',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1'
-          },
-          {
-            id: 1002,
-            name: '哔哩哔哩用户2',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2'
-          },
-          {
-            id: 1003,
-            name: 'Vue爱好者',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=vue'
+      try {
+        const result = await searchUsersAPI(addFriendQuery.value)
+        
+        if (result.success) {
+          // 将后端返回的用户数据转换为前端需要的格式
+          const users = result.data.map(user => ({
+            id: user.userId,
+            name: user.username,
+            avatar: user.avatarPath || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.userId}`
+          }))
+          
+          searchResults.value = users
+          searching.value = false
+
+          if (users.length === 0) {
+            searchError.value = '未找到相关用户'
           }
-        ].filter(user => 
-          user.name.toLowerCase().includes(addFriendQuery.value.toLowerCase()) ||
-          user.id.toString().includes(addFriendQuery.value)
-        )
-
-        searchResults.value = mockResults
-        searching.value = false
-
-        if (mockResults.length === 0) {
-          searchError.value = '未找到相关用户'
+        } else {
+          searchError.value = result.error || '搜索用户失败'
+          searching.value = false
         }
-      }, 1000)
+      } catch (error) {
+        console.error('搜索用户失败:', error)
+        searchError.value = '搜索用户时发生错误，请稍后重试'
+        searching.value = false
+      }
     }
 
     const isFriend = (userId) => {
       return Array.isArray(chatStore.friends) && chatStore.friends.some(friend => friend.id === userId)
     }
 
-    const addFriend = (userId) => {
-      // 模拟添加好友
+    const addFriend = async (userId) => {
       const newFriend = searchResults.value.find(user => user.id === userId)
       if (newFriend) {
-        chatStore.addFriend({
-          ...newFriend,
+        // 调用 store 中的 addFriend 方法
+        const result = await chatStore.addFriend({
+          id: newFriend.id,
+          username: newFriend.name,
+          avatar: newFriend.avatar,
           isOnline: Math.random() > 0.5,
           lastSeen: Math.random() > 0.5 ? '刚刚在线' : '10分钟前在线',
           level: Math.floor(Math.random() * 6) + 1,
@@ -323,11 +330,18 @@ export default {
           unread: 0
         })
         
-        // 从搜索结果中移除
-        searchResults.value = searchResults.value.filter(user => user.id !== userId)
+        if (result.success) {
+          // 从搜索结果中移除
+          searchResults.value = searchResults.value.filter(user => user.id !== userId)
+          
+          // 显示成功消息
+          searchError.value = result.message
+        } else {
+          // 显示错误消息
+          searchError.value = result.message
+        }
         
-        // 显示成功消息
-        searchError.value = '添加好友成功！'
+        // 2秒后清除消息
         setTimeout(() => {
           searchError.value = ''
         }, 2000)
@@ -345,16 +359,9 @@ export default {
       }
     }
 
-    onMounted(() => {
-      // 确保加载好友数据，添加空值检查
-      if (!Array.isArray(chatStore.friends) || chatStore.friends.length === 0) {
-        // 确保initMockData方法存在
-        if (chatStore.initMockData && typeof chatStore.initMockData === 'function') {
-          chatStore.initMockData()
-        } else {
-          console.warn('chatStore.initMockData方法不存在')
-        }
-      }
+    onMounted(async () => {
+      // 确保加载好友数据
+      await chatStore.initData()
     })
 
     return {

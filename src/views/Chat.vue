@@ -4,10 +4,10 @@
     <div class="chat-sidebar">
       <!-- 搜索栏 -->
       <div class="search-bar">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="搜索聊天..." 
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="搜索聊天..."
           class="search-input"
         />
         <i class="search-icon">🔍</i>
@@ -15,34 +15,34 @@
 
       <!-- 聊天列表 -->
       <div class="chat-list">
-        <div 
-          v-for="conversation in filteredConversations" 
-          :key="conversation.id"
-          class="chat-item"
-          :class="{ active: currentChatId === conversation.id }"
-          @click="selectChat(conversation)"
-        >
-          <div class="chat-avatar">
-            <img :src="conversation.avatar" alt="头像" />
-            <span v-if="conversation.isOnline" class="online-indicator"></span>
-          </div>
-          <div class="chat-info">
-            <div class="chat-header">
-              <h4 class="chat-name">{{ conversation.name }}</h4>
-              <span class="chat-time">{{ formatTime(conversation.lastMessageTime) }}</span>
-            </div>
-            <div class="chat-preview">
-              <span v-if="conversation.unreadCount > 0" class="unread-badge">{{ conversation.unreadCount }}</span>
-              <p class="chat-message">{{ conversation.lastMessage }}</p>
-            </div>
-          </div>
-        </div>
+        <div
+  v-for="conversation in filteredConversations"
+  :key="conversation.id"
+  class="chat-item"
+  :class="{ active: currentChatId === conversation.id }"
+  @click="selectChat(conversation)"
+>
+  <div class="chat-avatar">
+    <img :src="conversation.avatar" alt="头像" />
+    <span v-if="conversation.isOnline" class="online-indicator"></span>
+  </div>
+  <div class="chat-info">
+    <div class="chat-header">
+      <h4 class="chat-name">{{ conversation.name }}</h4>
+      <span class="chat-time">{{ formatTime(conversation.lastMessageTime) }}</span>
+    </div>
+    <div class="chat-preview">
+      <span v-if="conversation.unreadCount > 0" class="unread-badge">{{ conversation.unreadCount }}</span>
+      <p class="chat-message">{{ conversation.lastMessage }}</p>
+    </div>
+  </div>
+</div>
 
         <!-- 无聊天时的提示 -->
         <div v-if="filteredConversations.length === 0" class="no-chats">
           <div class="no-chats-icon">💬</div>
           <p>暂无聊天记录</p>
-          <Button type="primary" size="small" @click="navigateToFriends">添加好友</Button>
+          <CustomButton type="primary" size="small" @click="navigateToFriends">添加好友</CustomButton>
         </div>
       </div>
     </div>
@@ -77,7 +77,7 @@
             <button class="action-btn" title="更多选项" @click="showMoreOptions = !showMoreOptions">
               <i>•••</i>
             </button>
-            
+
             <!-- 更多选项下拉菜单 -->
             <div v-if="showMoreOptions" class="options-dropdown">
               <button class="option-item" @click="clearChat">
@@ -92,12 +92,12 @@
 
         <!-- 聊天消息区域 -->
         <div class="chat-messages" ref="messagesContainer">
-          <div 
-            v-for="(message, index) in currentChat.messages" 
-            :key="index"
-            class="message"
-            :class="message.isMine ? 'sent' : 'received'"
-          >
+          <div
+          v-for="message in currentChat.messages"
+          :key="message.id"
+          class="message"
+          :class="message.isMine ? 'sent' : 'received'"
+        >
             <div class="message-content">
               <div class="message-bubble">
                 {{ message.content }}
@@ -108,7 +108,7 @@
               <img :src="currentChat.avatar" alt="头像" />
             </div>
           </div>
-          
+
           <!-- 输入框占位符 -->
           <div class="message-input-placeholder"></div>
         </div>
@@ -129,11 +129,11 @@
               <i>🎤</i>
             </button>
           </div>
-          
+
           <div class="message-input-wrapper">
-            <textarea 
-              v-model="messageInput" 
-              placeholder="输入消息..." 
+            <textarea
+              v-model="messageInput"
+              placeholder="输入消息..."
               class="message-input"
               rows="1"
               @keydown.enter.prevent="handleEnterKey"
@@ -142,15 +142,15 @@
             ></textarea>
             <div class="input-footer">
               <span class="char-count">{{ messageInput.length }}/500</span>
-              <Button 
-                type="primary" 
+              <CustomButton
+                type="primary"
                 size="small"
                 @click="sendMessage"
                 :disabled="!messageInput.trim() || isSending"
                 :loading="isSending"
               >
                 发送
-              </Button>
+              </CustomButton>
             </div>
           </div>
         </div>
@@ -187,8 +187,8 @@
         <h4>发送失败</h4>
         <p>{{ errorMessage }}</p>
         <div class="error-actions">
-          <Button type="secondary" size="small" @click="closeErrorModal">取消</Button>
-          <Button type="primary" size="small" @click="resendMessage">重新发送</Button>
+          <CustomButton type="secondary" size="small" @click="closeErrorModal">取消</CustomButton>
+          <CustomButton type="primary" size="small" @click="resendMessage">重新发送</CustomButton>
         </div>
       </div>
     </div>
@@ -196,22 +196,22 @@
 </template>
 
 <script>
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
-import Button from '../components/Button.vue'
+import CustomButton from '../components/Button.vue'
 
 export default {
-  name: 'Chat',
+  name: 'ChatPage',
   components: {
-    Button
+    CustomButton
   },
   setup() {
     const router = useRouter()
     const chatStore = useChatStore()
     const messagesContainer = ref(null)
     const messageInputRef = ref(null)
-    
+
     // 响应式数据
     const currentChatId = ref(null)
     const searchQuery = ref('')
@@ -223,46 +223,79 @@ export default {
     const showErrorModal = ref(false)
     const errorMessage = ref('')
     const failedMessage = ref(null)
-    
+    const pollingInterval = ref(null) // 轮询定时器
+
     // 计算属性
     const currentChat = computed(() => {
       if (!currentChatId.value) return null
-      return chatStore.conversations.find(c => c.id === currentChatId.value)
-    })
-    
-    const filteredConversations = computed(() => {
-      if (!searchQuery.value) {
-        return chatStore.conversations
+      const friend = chatStore.getFriendInfo(currentChatId.value)
+      const messages = chatStore.getConversation(currentChatId.value)
+
+      if (!friend) return null
+
+      return {
+        id: friend.id,
+        name: friend.username,
+        avatar: friend.avatar,
+        isOnline: friend.status === 'online',
+        messages: messages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          isMine: msg.senderId === chatStore.currentUser
+        })),
+        unreadCount: chatStore.getUnreadCount(currentChatId.value)
       }
-      
-      const query = searchQuery.value.toLowerCase()
-      return chatStore.conversations.filter(conv => 
-        conv.name.toLowerCase().includes(query) ||
-        conv.lastMessage.toLowerCase().includes(query)
-      )
     })
-    
+
+    const filteredConversations = computed(() => {
+      return chatStore.getAllFriends.map(friend => {
+        const messages = chatStore.getConversation(friend.id)
+        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
+
+        return {
+          id: friend.id,
+          name: friend.username,
+          avatar: friend.avatar,
+          isOnline: friend.status === 'online',
+          lastMessage: lastMessage ? lastMessage.content : '',
+          lastMessageTime: lastMessage ? lastMessage.timestamp : new Date().toISOString(),
+          unreadCount: chatStore.getUnreadCount(friend.id)
+        }
+      }).filter(conv => {
+        if (!searchQuery.value) return true
+
+        const query = searchQuery.value.toLowerCase()
+        return conv.name.toLowerCase().includes(query) ||
+               conv.lastMessage.toLowerCase().includes(query)
+      })
+    })
+
     // 方法
-    const selectChat = (conversation) => {
+    const selectChat = async (conversation) => {
       currentChatId.value = conversation.id
       chatStore.setCurrentChat(conversation.id)
-      
+
       // 清除未读消息
       if (conversation.unreadCount > 0) {
-        chatStore.markAsRead(conversation.id)
+        // 在真实应用中，这里可能需要调用API来标记消息为已读
+        // chatStore.markAsRead(conversation.id)
       }
-      
+
+      // 获取新消息
+      await chatStore.fetchNewMessages(conversation.id)
+
       // 滚动到底部
       nextTick(() => {
         scrollToBottom()
       })
     }
-    
+
     const formatTime = (timestamp) => {
       const date = new Date(timestamp)
       const now = new Date()
       const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
-      
+
       if (diffDays === 0) {
         // 今天
         return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -278,7 +311,7 @@ export default {
         return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
       }
     }
-    
+
     const handleEnterKey = (event) => {
       if (event.shiftKey) {
         // Shift + Enter 换行
@@ -287,49 +320,35 @@ export default {
       // Enter 发送
       sendMessage()
     }
-    
+
     const sendMessage = async () => {
       if (!messageInput.value.trim() || !currentChat.value || isSending.value) {
         return
       }
-      
+
       const content = messageInput.value.trim()
       if (content.length > 500) {
         showError('消息内容不能超过500个字符')
         return
       }
-      
+
       isSending.value = true
       showSendingIndicator.value = true
-      
+
       try {
-        // 模拟发送消息
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        // 添加消息到聊天记录
-        const newMessage = {
-          id: Date.now(),
-          content: content,
-          timestamp: new Date().toISOString(),
-          isMine: true,
-          status: 'sent'
-        }
-        
-        chatStore.sendMessage(currentChatId.value, newMessage)
-        
+        // 使用真实API发送消息
+        await chatStore.sendMessage(currentChatId.value, content)
+
         // 清空输入框
         messageInput.value = ''
-        
+
         // 滚动到底部
         nextTick(() => {
           scrollToBottom()
         })
-        
-        // 模拟对方回复
-        simulateReply()
-        
-      } catch (error) {
-        console.error('发送消息失败:', error)
+
+      } catch (e) {
+        console.error('发送消息失败:', e)
         failedMessage.value = { content }
         showErrorModal.value = true
         errorMessage.value = '消息发送失败，请稍后重试'
@@ -338,7 +357,7 @@ export default {
         showSendingIndicator.value = false
       }
     }
-    
+
     const resendMessage = () => {
       if (failedMessage.value) {
         messageInput.value = failedMessage.value.content
@@ -348,60 +367,20 @@ export default {
         })
       }
     }
-    
+
     const closeErrorModal = () => {
       showErrorModal.value = false
       failedMessage.value = null
     }
-    
-    const simulateReply = () => {
-      // 模拟对方正在输入
-      setTimeout(() => {
-        if (currentChat.value) {
-          isTyping.value = true
-          
-          // 2-3秒后发送回复
-          setTimeout(() => {
-            if (currentChat.value) {
-              isTyping.value = false
-              
-              const replies = [
-                '好的，我知道了！',
-                '收到你的消息啦~',
-                '👍',
-                '哈哈哈，真有趣！',
-                '我也这么想的',
-                '稍等，我在忙',
-                '有时间我们聊一聊吧',
-                '太棒了！'
-              ]
-              
-              const randomReply = replies[Math.floor(Math.random() * replies.length)]
-              const replyMessage = {
-                id: Date.now() + 1,
-                content: randomReply,
-                timestamp: new Date().toISOString(),
-                isMine: false,
-                status: 'received'
-              }
-              
-              chatStore.sendMessage(currentChatId.value, replyMessage)
-              
-              nextTick(() => {
-                scrollToBottom()
-              })
-            }
-          }, 2000 + Math.random() * 1000)
-        }
-      }, 1000)
-    }
-    
+
+
+
     const scrollToBottom = () => {
       if (messagesContainer.value) {
         messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
       }
     }
-    
+
     const viewUserProfile = () => {
       if (currentChat.value) {
         // 这里可以跳转到用户资料页或打开用户资料弹窗
@@ -409,7 +388,7 @@ export default {
         // 示例：router.push(`/user/${currentChat.value.id}`)
       }
     }
-    
+
     const clearChat = () => {
       if (currentChat.value) {
         if (confirm('确定要清空聊天记录吗？此操作不可恢复。')) {
@@ -418,7 +397,7 @@ export default {
         }
       }
     }
-    
+
     const blockUser = () => {
       if (currentChat.value) {
         if (confirm(`确定要屏蔽 ${currentChat.value.name} 吗？`)) {
@@ -428,15 +407,15 @@ export default {
         }
       }
     }
-    
+
     const navigateToFriends = () => {
       router.push('/friends')
     }
-    
+
     const showError = (message) => {
       alert(message)
     }
-    
+
     // 自动调整输入框高度
     const adjustTextareaHeight = () => {
       if (messageInputRef.value) {
@@ -444,12 +423,12 @@ export default {
         messageInputRef.value.style.height = Math.min(messageInputRef.value.scrollHeight, 120) + 'px'
       }
     }
-    
+
     // 监听输入
     watch(messageInput, () => {
       adjustTextareaHeight()
     })
-    
+
     // 监听当前聊天变化
     watch(currentChat, () => {
       nextTick(() => {
@@ -457,48 +436,70 @@ export default {
         adjustTextareaHeight()
       })
     })
-    
+
     // 监听点击外部关闭选项菜单
     const handleClickOutside = (event) => {
       const dropdown = document.querySelector('.options-dropdown')
       const actionsButton = document.querySelector('.action-btn:last-child')
-      
+
       if (dropdown && actionsButton && !dropdown.contains(event.target) && !actionsButton.contains(event.target)) {
         showMoreOptions.value = false
       }
     }
-    
+
     // 生命周期钩子
-    onMounted(() => {
+    onMounted(async () => {
       // 初始化聊天数据
-      if (chatStore.conversations.length === 0) {
-        chatStore.initMockData()
-      }
-      
+      await chatStore.initData()
+
       // 默认选择第一个聊天
-      if (chatStore.conversations.length > 0) {
-        selectChat(chatStore.conversations[0])
+      if (chatStore.getAllFriends.length > 0) {
+        const firstFriend = chatStore.getAllFriends[0]
+        const conv = {
+          id: firstFriend.id,
+          name: firstFriend.username,
+          avatar: firstFriend.avatar,
+          isOnline: firstFriend.status === 'online',
+          lastMessage: '',
+          lastMessageTime: new Date().toISOString(),
+          unreadCount: 0
+        }
+        await selectChat(conv)
       }
-      
+
       // 添加点击外部事件监听
       document.addEventListener('click', handleClickOutside)
-      
+
       // 调整输入框高度
       adjustTextareaHeight()
-      
+
       // 监听窗口大小变化，调整布局
       window.addEventListener('resize', () => {
         nextTick(() => {
           scrollToBottom()
         })
       })
+
+      // 启动轮询获取新消息
+      pollingInterval.value = setInterval(async () => {
+        if (currentChatId.value) {
+          await chatStore.fetchNewMessages(currentChatId.value)
+          nextTick(() => {
+            scrollToBottom()
+          })
+        }
+      }, 5000) // 每5秒轮询一次
     })
-    
+
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
       window.removeEventListener('resize', () => {})
+      // 清除轮询定时器
+      if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+      }
     })
-    
+
     return {
       currentChatId,
       currentChat,
@@ -1092,36 +1093,36 @@ export default {
   .chat-container {
     flex-direction: column;
   }
-  
+
   .chat-sidebar {
     width: 100%;
     height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
-  
+
   .chat-main {
     height: 50%;
   }
-  
+
   .message {
     max-width: 85%;
   }
-  
+
   .typing-indicator {
     left: 20px;
     right: 20px;
     transform: none;
   }
-  
+
   .chat-header-bar {
     padding: 12px 15px;
   }
-  
+
   .chat-messages {
     padding: 15px;
   }
-  
+
   .chat-input-area {
     padding: 15px;
   }
@@ -1131,16 +1132,16 @@ export default {
   .chat-item {
     padding: 12px;
   }
-  
+
   .chat-avatar img {
     width: 40px;
     height: 40px;
   }
-  
+
   .message {
     max-width: 90%;
   }
-  
+
   .message-bubble {
     font-size: 14px;
     padding: 8px 12px;

@@ -5,9 +5,9 @@
       <div class="profile-cover">
         <div class="cover-overlay">
           <div class="avatar-section">
-            <img 
-              :src="userStore.avatar" 
-              alt="用户头像" 
+            <img
+              :src="userStore.avatar"
+              alt="用户头像"
               class="user-avatar"
             />
             <div class="user-info">
@@ -36,22 +36,22 @@
     <!-- 内容导航 -->
     <div class="content-nav">
       <div class="nav-tabs">
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'activities' }"
           @click="activeTab = 'activities'"
         >
           动态
         </button>
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'collections' }"
           @click="activeTab = 'collections'"
         >
           收藏
         </button>
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'history' }"
           @click="activeTab = 'history'"
         >
@@ -94,9 +94,9 @@
             <h3>最近互动好友</h3>
           </template>
           <div class="friends-list">
-            <div 
-              v-for="friend in recentFriends" 
-              :key="friend.id" 
+            <div
+              v-for="friend in recentFriends"
+              :key="friend.id"
               class="friend-item"
               @click="goToChat(friend.id)"
             >
@@ -193,7 +193,7 @@ import { useChatStore } from '../stores/chat'
 import Card from '../components/Card.vue'
 
 export default {
-  name: 'Profile',
+  name: 'UserProfile',
   components: {
     Card
   },
@@ -708,26 +708,26 @@ export default {
   .profile-content {
     grid-template-columns: 1fr;
   }
-  
+
   .sidebar-left {
     display: none;
   }
-  
+
   .avatar-section {
     flex-direction: column;
     text-align: center;
     padding-bottom: 20px;
   }
-  
+
   .user-avatar {
     width: 80px;
     height: 80px;
   }
-  
+
   .user-info h1 {
     font-size: 20px;
   }
-  
+
   .user-stats {
     gap: 20px;
   }
