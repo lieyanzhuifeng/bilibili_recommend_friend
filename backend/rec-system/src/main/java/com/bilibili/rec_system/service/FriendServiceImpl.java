@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,6 +28,12 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public boolean sendFriendRequest(Long userId, Long targetUserId) {
+        // 验证目标用户是否存在
+        User targetUser = userRepository.findByUserId(targetUserId);
+        if (targetUser == null) {
+            return false; // 目标用户不存在
+        }
+
         // 检查是否已经是好友或已有申请
         if (isFriend(userId, targetUserId)) {
             return false; // 已经是好友
@@ -138,5 +146,32 @@ public class FriendServiceImpl implements FriendService {
 
         // 查询申请者的用户信息
         return userRepository.findByUserIds(requesterIds);
+    }
+
+    @Override
+    public List<User> searchUsers(String keyword) {
+        // 实现根据关键字搜索用户的功能
+        // 可以根据用户名或用户ID进行搜索
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        try {
+            // 尝试将关键字解析为用户ID
+            Long userId = Long.parseLong(keyword.trim());
+            User user = userRepository.findByUserId(userId);
+            if (user != null) {
+                return Arrays.asList(user);
+            } else {
+                return new ArrayList<>();
+            }
+        } catch (NumberFormatException e) {
+            // 如果不是有效的数字，则按用户名搜索
+            // 这里可以使用更复杂的查询，比如模糊匹配
+            return userRepository.findAll().stream()
+                    .filter(user -> user.getUsername() != null && 
+                            user.getUsername().toLowerCase().contains(keyword.toLowerCase().trim()))
+                    .collect(Collectors.toList());
+        }
     }
 }

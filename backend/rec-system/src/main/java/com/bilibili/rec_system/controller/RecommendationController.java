@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/recommend")
-@CrossOrigin(origins = "*") // 允许所有跨域请求，方便测试
 public class RecommendationController {
 
     @Autowired

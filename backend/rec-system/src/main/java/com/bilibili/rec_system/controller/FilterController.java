@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/filter")
-@CrossOrigin(origins = "*")
 public class FilterController {
 
     @Autowired

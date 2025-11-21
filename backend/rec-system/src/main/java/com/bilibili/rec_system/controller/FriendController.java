@@ -16,17 +16,37 @@ public class FriendController {
     private FriendService friendService;
 
     /**
+     * 搜索用户
+     */
+    @GetMapping(value = "/search", produces = "application/json;charset=UTF-8")
+    public ResponseEntity<?> searchUsers(@RequestParam String keyword) {
+        try {
+            List<User> users = friendService.searchUsers(keyword);
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("搜索用户时发生错误: " + e.getMessage());
+        }
+    }
+
+    /**
      * 发送好友申请
      */
     @PostMapping("/request")
     public ResponseEntity<?> sendFriendRequest(@RequestParam Long userId,
                                                @RequestParam Long targetUserId) {
         try {
+            // 验证用户ID参数
+            if (userId == null || targetUserId == null) {
+                return ResponseEntity.badRequest().body("用户ID不能为空");
+            }
+            
             boolean success = friendService.sendFriendRequest(userId, targetUserId);
             if (success) {
                 return ResponseEntity.ok().body("好友申请发送成功");
             } else {
-                return ResponseEntity.badRequest().body("好友申请发送失败");
+                // 检查目标用户是否存在
+                // 这里我们假设如果发送失败是因为目标用户不存在，可以改进为更精确的错误处理
+                return ResponseEntity.badRequest().body("好友申请发送失败，请检查目标用户是否存在且不是好友或已申请");
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("发送好友申请时发生错误: " + e.getMessage());
@@ -104,7 +124,7 @@ public class FriendController {
     /**
      * 获取好友列表
      */
-    @GetMapping("/list/{userId}")
+    @GetMapping(value = "/list/{userId}", produces = "application/json;charset=UTF-8")
     public ResponseEntity<?> getFriends(@PathVariable Long userId) {
         try {
             List<User> friends = friendService.getFriends(userId);

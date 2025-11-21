@@ -25,4 +25,7 @@ public interface FriendService {
 
     // 7. 获取待处理的好友申请列表
     List<User> getPendingFriendRequests(Long userId);
+
+    // 8. 搜索用户
+    List<User> searchUsers(String keyword);
 }
