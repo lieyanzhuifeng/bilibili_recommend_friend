@@ -131,5 +131,24 @@ public class FilterController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 深度视频筛选
+     */
+    @GetMapping("/deep-video")
+    public List<DeepVideoRecommendationDTO> deepVideoFilter(
+            @RequestParam Long videoId,
+            @RequestParam Integer option) {
+
+        FilterService service = filterServiceFactory.getFilterService("deep_video");
+        DeepVideoFilterDTO filter = new DeepVideoFilterDTO();
+        filter.setVideoId(videoId);
+        filter.setOption(option);
+
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+        return baseResult.stream()
+                .map(dto -> (DeepVideoRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
 
 }

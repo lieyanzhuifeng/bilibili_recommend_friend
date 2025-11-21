@@ -3,6 +3,8 @@ package com.bilibili.rec_system.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalTime;
+
 @Entity
 @Table(name = "user_video_stats")
 @Data
@@ -22,5 +24,5 @@ public class UserVideoStats {
     private Integer watchCount = 0;
 
     @Column(name = "totalWatchDuration")
-    private Integer totalWatchDuration = 0;
+    private LocalTime totalWatchDuration;
 }

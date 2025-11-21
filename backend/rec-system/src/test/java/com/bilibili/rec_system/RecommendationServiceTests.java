@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.Duration;
+import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,9 @@ public class RecommendationServiceTests {
 
     @Autowired
     private UserStatisticsRepository userStatisticsRepository;
+
+    @Autowired
+    private VideoRepository videoRepository;
 
     //在同一个视频下评论
     @Test
@@ -611,7 +615,53 @@ public class RecommendationServiceTests {
         }
     }
 
+    @Test
+    void testDeepVideoFilter() {
+        System.out.println("=== 测试深度视频筛选功能 ===");
 
+        FilterService service = filterServiceFactory.getFilterService("deep_video");
+
+        // 直接测试，不嵌套
+        testSingleCase(20L, 0, service);  // 视频20，深度观看
+        testSingleCase(20L, 1, service);  // 视频20，极其深度观看
+        testSingleCase(58L, 0, service);  // 视频58，深度观看
+        testSingleCase(58L, 1, service);  // 视频58，极其深度观看
+    }
+
+    private void testSingleCase(Long videoId, Integer option, FilterService service) {
+        System.out.println("\n--- 测试视频ID: " + videoId + ", 选项: " + option + " ---");
+
+        // 🎯 关键调用位置：创建DTO并传入Service
+        DeepVideoFilterDTO filter = new DeepVideoFilterDTO();
+        filter.setVideoId(videoId);
+        filter.setOption(option);
+
+        // 🎯 关键调用位置：调用Service的filterUsers方法
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+
+        // 转换为具体DTO类型
+        List<DeepVideoRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (DeepVideoRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        String optionDesc = option == 0 ? "深度观看(≥5次或≥2倍时长)" : "极其深度观看(≥10次或≥5倍时长)";
+        System.out.println("筛选条件: " + optionDesc);
+        System.out.println("推荐用户数量: " + dtoResult.size());
+
+        if (!dtoResult.isEmpty()) {
+            // 使用JSON格式打印结果
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                System.out.println("推荐结果:");
+                System.out.println(jsonResult);
+            } catch (Exception e) {
+                System.out.println("推荐结果: " + dtoResult);
+            }
+        } else {
+            System.out.println("❌ 没有符合条件的用户");
+        }
+    }
 
 
 
