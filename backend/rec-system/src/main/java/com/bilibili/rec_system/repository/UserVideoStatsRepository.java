@@ -23,4 +23,16 @@ public interface UserVideoStatsRepository extends JpaRepository<UserVideoStats, 
     List<UserVideoStats> findByVideoIdAndMinCountOrDuration(@Param("videoId") Long videoId,
                                                             @Param("minCount") Integer minCount,
                                                             @Param("minDuration") LocalTime minDuration);
+
+    /**
+     * 根据用户ID和视频ID列表批量查询观看记录
+     */
+    @Query("SELECT uvs FROM UserVideoStats uvs WHERE uvs.userId = :userId AND uvs.videoId IN :videoIds")
+    List<UserVideoStats> findByUserIdAndVideoIdIn(@Param("userId") Long userId, @Param("videoIds") List<Long> videoIds);
+
+    /**
+     * 根据视频ID列表查询所有相关的观看记录
+     */
+    @Query("SELECT uvs FROM UserVideoStats uvs WHERE uvs.videoId IN :videoIds")
+    List<UserVideoStats> findByVideoIdIn(@Param("videoIds") List<Long> videoIds);
 }

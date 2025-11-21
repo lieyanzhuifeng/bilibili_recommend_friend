@@ -30,5 +30,30 @@ public interface UserFollowUpRepository extends JpaRepository<UserFollowUp, Long
     @Query("SELECT ufu.userId FROM UserFollowUp ufu WHERE ufu.upId = :upId AND ufu.userId <> :excludeUserId")
     List<Long> findUsersByUpIdExcludingUser(@Param("upId") Long upId, @Param("excludeUserId") Long excludeUserId);
 
+    /**
+     * 获取用户关注的所有UP主ID列表
+     */
+    @Query("SELECT ufu.upId FROM UserFollowUp ufu WHERE ufu.userId = :userId")
+    List<Long> findUpIdsByUserId(@Param("userId") Long userId);
+
+    /**
+     * 获取用户关注的UP主数量
+     */
+    @Query("SELECT COUNT(ufu) FROM UserFollowUp ufu WHERE ufu.userId = :userId")
+    Long countFollowedUpsByUserId(@Param("userId") Long userId);
+
+    /**
+     * 获取两个用户共同关注的UP主ID列表
+     */
+    @Query("SELECT ufu1.upId FROM UserFollowUp ufu1 " +
+            "JOIN UserFollowUp ufu2 ON ufu1.upId = ufu2.upId " +
+            "WHERE ufu1.userId = :userId1 AND ufu2.userId = :userId2")
+    List<Long> findCommonUpIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+
+    /**
+     * 获取所有关注了指定UP主的用户ID
+     */
+    @Query("SELECT ufu.userId FROM UserFollowUp ufu WHERE ufu.upId = :upId")
+    List<Long> findUserIdsByUpId(@Param("upId") Long upId);
 
 }

@@ -150,5 +150,22 @@ public class FilterController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 系列作品筛选
+     */
+    @GetMapping("/series")
+    public List<SeriesRecommendationDTO> seriesFilter(
+            @RequestParam Long tagId) {
+
+        FilterService service = filterServiceFactory.getFilterService("series");
+        SeriesFilterDTO filter = new SeriesFilterDTO();
+        filter.setTagId(tagId);
+
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+        return baseResult.stream()
+                .map(dto -> (SeriesRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
 
 }

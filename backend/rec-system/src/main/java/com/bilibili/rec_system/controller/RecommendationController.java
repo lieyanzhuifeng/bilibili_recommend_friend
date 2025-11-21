@@ -95,4 +95,32 @@ public class RecommendationController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 共同关注UP主推荐
+     */
+    @GetMapping("/common-up/{userId}")
+    public List<CommonUpRecommendationDTO> getCommonUpRecommendations(@PathVariable Long userId) {
+
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("common_up");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+        return baseResult.stream()
+                .map(dto -> (CommonUpRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 收藏夹相似度推荐
+     */
+    @GetMapping("/favorite-similarity/{userId}")
+    public List<FavoriteSimilarityDTO> getFavoriteSimilarityRecommendations(@PathVariable Long userId) {
+
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("favorite_similarity");
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+        return baseResult.stream()
+                .map(dto -> (FavoriteSimilarityDTO) dto)
+                .collect(Collectors.toList());
+    }
+
 }

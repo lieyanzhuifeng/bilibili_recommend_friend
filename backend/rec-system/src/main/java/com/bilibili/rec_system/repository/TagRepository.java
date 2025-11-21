@@ -19,4 +19,10 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
      * 根据标签ID获取标签实体
      */
     Tag findByTagId(Long tagId);
+
+    /**
+     * 检查是否为系列标签（标签名称以"系列"结尾）
+     */
+    @Query("SELECT CASE WHEN t.tagName LIKE '%系列' THEN true ELSE false END FROM Tag t WHERE t.tagId = :tagId")
+    Boolean isSeriesTag(@Param("tagId") Long tagId);
 }

@@ -615,6 +615,7 @@ public class RecommendationServiceTests {
         }
     }
 
+    //输入videoid和选项输出深度视频或极其深度视频的用户推荐
     @Test
     void testDeepVideoFilter() {
         System.out.println("=== 测试深度视频筛选功能 ===");
@@ -663,6 +664,141 @@ public class RecommendationServiceTests {
         }
     }
 
+    //根据tagid输出看完改系列视频的用户
+    @Test
+    void testSeriesFilter() {
+        System.out.println("=== 测试系列作品筛选功能 ===");
+
+        FilterService service = filterServiceFactory.getFilterService("series");
+
+        // 测试标签ID 1 (徐静雨 - 不是系列)
+        testSimpleSeriesFilter(1L, service);
+
+        // 测试标签ID 2 (每日必看系列 - 是系列)
+        testSimpleSeriesFilter(2L, service);
+    }
+
+    private void testSimpleSeriesFilter(Long tagId, FilterService service) {
+        System.out.println("\n--- 测试标签ID: " + tagId + " ---");
+
+        SeriesFilterDTO filter = new SeriesFilterDTO();
+        filter.setTagId(tagId);
+
+        List<BaseDTO> baseResult = service.filterUsers(filter);
+        List<SeriesRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (SeriesRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        System.out.println("推荐用户数量: " + dtoResult.size());
+
+        if (!dtoResult.isEmpty()) {
+            // 使用JSON格式打印结果
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                System.out.println("推荐结果:");
+                System.out.println(jsonResult);
+            } catch (Exception e) {
+                System.out.println("推荐结果: " + dtoResult);
+            }
+        } else {
+            System.out.println("❌ 没有符合条件的用户");
+        }
+    }
+
+    //根据userid推荐共同关注up主相似度高的用户
+    @Test
+    void testCommonUpRecommendation() {
+        System.out.println("=== 测试共同关注UP主推荐功能 ===");
+
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("common_up");
+
+        // 测试用户1-5的共同关注推荐
+        for (long userId = 1; userId <= 5; userId++) {
+            testUserCommonUpRecommendation(userId, service);
+        }
+    }
+
+    private void testUserCommonUpRecommendation(Long userId, RecommendationService service) {
+        System.out.println("\n--- 测试用户ID: " + userId + " ---");
+
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+        List<CommonUpRecommendationDTO> dtoResult = baseResult.stream()
+                .map(dto -> (CommonUpRecommendationDTO) dto)
+                .collect(Collectors.toList());
+
+        // 获取用户关注的UP主信息
+        List<Long> userUpIds = userFollowUpRepository.findUpIdsByUserId(userId);
+        List<String> userUpNames = getUpNames(userUpIds);
+
+        User user = userRepository.findByUserId(userId);
+        System.out.println("用户: " + (user != null ? user.getUsername() : "未知用户"));
+        System.out.println("关注UP主数量: " + userUpIds.size());
+        System.out.println("关注的UP主: " + String.join(", ", userUpNames));
+
+        System.out.println("推荐用户数量: " + dtoResult.size());
+
+        if (!dtoResult.isEmpty()) {
+            // 使用JSON格式打印结果
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                System.out.println("推荐结果:");
+                System.out.println(jsonResult);
+            } catch (Exception e) {
+                System.out.println("推荐结果: " + dtoResult);
+            }
+        } else {
+            System.out.println("❌ 没有找到有共同关注的用户");
+        }
+    }
+
+    private List<String> getUpNames(List<Long> upIds) {
+        return upIds.stream()
+                .map(upId -> {
+                    String upName = userRepository.findUpNameById(upId);
+                    return upName != null ? upName : "未知UP主";
+                })
+                .collect(Collectors.toList());
+    }
+
+    //根据userid推荐收藏夹相似度
+    @Test
+    void testFavoriteSimilarity() {
+        System.out.println("=== 测试收藏夹相似度推荐功能 ===");
+
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("favorite_similarity");
+
+        // 测试用户1-3的收藏夹相似度推荐
+        for (long userId = 1; userId <= 3; userId++) {
+            testUserFavoriteSimilarity(userId, service);
+        }
+    }
+
+    private void testUserFavoriteSimilarity(Long userId, RecommendationService service) {
+        System.out.println("\n--- 测试用户ID: " + userId + " ---");
+
+        List<BaseDTO> baseResult = service.recommendUsers(userId);
+        List<FavoriteSimilarityDTO> dtoResult = baseResult.stream()
+                .map(dto -> (FavoriteSimilarityDTO) dto)
+                .collect(Collectors.toList());
+
+        System.out.println("推荐用户数量: " + dtoResult.size());
+
+        if (!dtoResult.isEmpty()) {
+            // 使用JSON格式打印结果
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonResult = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dtoResult);
+                System.out.println("推荐结果:");
+                System.out.println(jsonResult);
+            } catch (Exception e) {
+                System.out.println("推荐结果: " + dtoResult);
+            }
+        } else {
+            System.out.println("❌ 没有找到有收藏夹相似度的用户");
+        }
+    }
 
 
 }

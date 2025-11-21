@@ -32,6 +32,9 @@ public class FilterServiceFactory {
 
     @Autowired
     private DeepVideoFilterService deepVideoFilterService;
+
+    @Autowired
+    private SeriesFilterService seriesFilterService;
     /**
      * 根据筛选类型获取对应的筛选服务
      * @param filterType 筛选类型
@@ -47,6 +50,7 @@ public class FilterServiceFactory {
             case "night_owl" -> nightOwlRecommendationService;
             case "user_activity" -> userActivityRecommendationService;
             case "deep_video" -> deepVideoFilterService;
+            case "series" -> seriesFilterService;
             default -> throw new IllegalArgumentException("不支持的筛选类型: " + filterType);
         };
     }
