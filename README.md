@@ -372,3 +372,112 @@
     "seriesName": "每日必看系列"
   }
 ]
+```
+### 10. 基于用户评论内容相似度推荐好友
+- **端点**: `GET /api/recommend/comment-friends/{userId}`
+- **描述**: 通过分析用户的历史评论内容，找到评论内容相似的其他用户进行好友推荐
+
+### 请求参数
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| userId | Long | 是 | 目标用户ID，路径参数 |
+
+### 响应数据
+返回 `List<FriendRecommendationDTO>` 对象数组，包含以下字段：
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| userComment | Comment | 用户自己的评论 |
+| matchedComment | Comment | 匹配到的其他用户评论 |
+| video | Video | 相关视频信息 |
+| recommendedUser | User | 推荐用户信息 |
+| matchScore | double | 评论内容匹配分数 |
+
+### Comment 对象结构
+```json
+{
+  "commentId": "评论ID",
+  "videoId": "视频ID", 
+  "userId": "用户ID",
+  "content": "评论内容",
+  "parentId": "父评论ID"
+}
+```
+
+### User 对象结构
+```json
+{
+  "userId": "用户ID",
+  "username": "用户名",
+  "registerTime": "注册时间",
+  "avatarPath": "头像路径"
+}
+```
+
+### Video 对象结构
+```json
+{
+  "videoId": "视频ID",
+  "uploaderId": "上传者ID",
+  "title": "视频标题",
+  "categoryId": "分类ID", 
+  "themeId": "主题ID",
+  "publishTime": "发布时间",
+  "duration": "视频时长"
+}
+```
+
+### 响应示例
+```json
+[
+  {
+    "userComment": {
+      "commentId": 12345,
+      "videoId": 67890,
+      "userId": 1001,
+      "content": "这个视频太精彩了！",
+      "parentId": 0
+    },
+    "matchedComment": {
+      "commentId": 12346,
+      "videoId": 67890,
+      "userId": 1002,
+      "content": "确实很精彩的内容",
+      "parentId": 0
+    },
+    "video": {
+      "videoId": 67890,
+      "uploaderId": 5001,
+      "title": "精彩视频标题",
+      "categoryId": 1,
+      "themeId": 2,
+      "publishTime": "2024-01-15T10:30:00",
+      "duration": "00:15:30"
+    },
+    "recommendedUser": {
+      "userId": 1002,
+      "username": "推荐用户昵称",
+      "registerTime": "2023-05-20T14:25:00",
+      "avatarPath": "/avatars/1002.jpg"
+    },
+    "matchScore": 0.85
+  }
+]
+```
+
+### 使用场景
+- 为用户推荐兴趣相投的潜在好友
+- 基于评论内容的社区用户发现
+- 增强用户社交互动和社区粘性
+
+### 注意事项
+- 需要确保评论内容长度满足最小字数要求
+- 匹配分数超过阈值才会被推荐
+- 推荐结果按匹配分数降序排列
+
+### 模型配置方法
+基于用户评论内容相似度推荐好友方法需要在本地下载两个模型
+分别为bert-base-multilingual-uncased-sentiment文件夹
+和paraphrase-multilingual-MiniLM-L12-v2文件夹
+将这两个模型文件夹放在**rec-system**文件夹下，**在使用平台打开项目时，必需选择打开rec-system文件夹，否则无法运行**
+

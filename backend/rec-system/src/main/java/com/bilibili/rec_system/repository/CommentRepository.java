@@ -11,6 +11,12 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
+    // 根据用户ID查找评论
+    List<Comment> findByUserId(Long userId);
+
+    // 根据视频ID和排除的用户ID查找评论
+    List<Comment> findByVideoIdAndUserIdNot(Long videoId, Long userId);
+
     // 3.1 推荐回复过自己评论的用户
     @Query("SELECT DISTINCT c.userId FROM Comment c WHERE c.parentId = :userId")
     List<Long> findUsersWhoRepliedToUser(@Param("userId") Long userId);

@@ -2,6 +2,7 @@
 package com.bilibili.rec_system.controller;
 
 import com.bilibili.rec_system.dto.*;
+import com.bilibili.rec_system.service.CommentBasedFriendRecommendationService;
 import com.bilibili.rec_system.service.RecommendationService;
 import com.bilibili.rec_system.service.RecommendationServiceImpl.RecommendationServiceFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,9 @@ public class RecommendationController {
 
     @Autowired
     private RecommendationServiceFactory recommendationServiceFactory;
+
+    @Autowired
+    private CommentBasedFriendRecommendationService commentBasedFriendRecommendationService;
 
     /**
      * 获取同视频评论推荐用户
@@ -121,6 +125,14 @@ public class RecommendationController {
         return baseResult.stream()
                 .map(dto -> (FavoriteSimilarityDTO) dto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 通过评论推荐好友
+     */
+    @GetMapping("/comment-friends/{userId}")
+    public List<FriendRecommendationDTO> recommendFriendsByComments(@PathVariable Long userId) {
+        return commentBasedFriendRecommendationService.recommendFriendsByComments(userId);
     }
 
 }
