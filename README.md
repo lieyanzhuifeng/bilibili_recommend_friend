@@ -481,3 +481,101 @@
 和paraphrase-multilingual-MiniLM-L12-v2文件夹
 将这两个模型文件夹放在**rec-system**文件夹下，**在使用平台打开项目时，必需选择打开rec-system文件夹，否则无法运行**
 
+## 11.根据ID获取用户信息
+
+**基础路径**: `/api/users`  
+**协议**: HTTP/HTTPS  
+**数据格式**: JSON  
+**认证方式**: 无需认证（可根据需要添加）
+
+---
+
+## API 接口详情
+
+### 1. 通过用户ID获取用户信息
+
+**端点**: `GET /api/users/{userId}`
+
+#### 请求参数
+
+| 参数名 | 类型 | 位置 | 必需 | 描述 |
+|--------|------|------|------|------|
+| userId | Long | Path | 是 | 用户唯一标识ID |
+
+#### 请求示例
+
+```http
+GET http://localhost:8080/api/users/123
+Accept: application/json
+Content-Type: application/json
+```
+
+#### 响应格式
+
+**成功响应 (HTTP 200)**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 123,
+    "username": "john_doe",
+    "email": "john@example.com",
+    "createTime": "2023-01-15T10:30:00",
+    "updateTime": "2023-06-20T14:25:00"
+  },
+  "message": "获取用户信息成功"
+}
+```
+
+**用户不存在 (HTTP 404)**
+```json
+{
+  "success": false,
+  "message": "用户不存在"
+}
+```
+
+**服务器错误 (HTTP 500)**
+```json
+{
+  "success": false,
+  "message": "服务器内部错误: [具体错误信息]"
+}
+```
+
+#### 响应字段说明
+
+**根对象字段**:
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| success | Boolean | 请求是否成功 |
+| data | Object | 用户数据对象（成功时返回） |
+| message | String | 响应消息 |
+
+#### 状态码说明
+
+| HTTP状态码 | 说明 |
+|------------|------|
+| 200 | 请求成功，返回用户信息 |
+| 404 | 用户不存在 |
+| 500 | 服务器内部错误 |
+
+## 错误处理
+
+### 常见错误场景
+
+1. **用户不存在**
+   - 状态码: 404
+   - 响应: `{"success": false, "message": "用户不存在"}`
+
+2. **参数格式错误**
+   - 状态码: 400
+   - 响应: `{"success": false, "message": "参数格式错误"}`
+
+3. **服务器内部错误**
+   - 状态码: 500
+   - 响应: `{"success": false, "message": "服务器内部错误: [具体错误信息]"}`
+
+
+
+
