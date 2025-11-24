@@ -519,9 +519,8 @@ Content-Type: application/json
   "data": {
     "userId": 123,
     "username": "john_doe",
-    "email": "john@example.com",
-    "createTime": "2023-01-15T10:30:00",
-    "updateTime": "2023-06-20T14:25:00"
+    "registerTime": "2023-01-15T10:30:00",
+    "avatarPath": "/avatars/john_doe.jpg"
   },
   "message": "获取用户信息成功"
 }
@@ -559,22 +558,6 @@ Content-Type: application/json
 | 200 | 请求成功，返回用户信息 |
 | 404 | 用户不存在 |
 | 500 | 服务器内部错误 |
-
-## 错误处理
-
-### 常见错误场景
-
-1. **用户不存在**
-   - 状态码: 404
-   - 响应: `{"success": false, "message": "用户不存在"}`
-
-2. **参数格式错误**
-   - 状态码: 400
-   - 响应: `{"success": false, "message": "参数格式错误"}`
-
-3. **服务器内部错误**
-   - 状态码: 500
-   - 响应: `{"success": false, "message": "服务器内部错误: [具体错误信息]"}`
 
 
 
