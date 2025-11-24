@@ -1,3 +1,8 @@
+# 添加模型文件夹忽略规则
+bert-base-multilingual-uncased-sentiment/
+paraphrase-multilingual-MiniLM-L12-v2/
+
+# 原有的其他规则
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
