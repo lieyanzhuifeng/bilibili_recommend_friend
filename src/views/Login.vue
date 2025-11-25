@@ -7,24 +7,24 @@
       </div>
       <div class="login-form">
         <div class="form-item">
-          <input 
-            v-model="username" 
-            type="text" 
-            placeholder="请输入用户名"
+          <input
+            v-model="userId"
+            type="text"
+            placeholder="请输入用户ID"
             class="form-input"
             @keyup.enter="handleLogin"
           />
         </div>
-        <button 
-          @click="handleLogin" 
+        <button
+          @click="handleLogin"
           class="login-btn"
-          :disabled="!username.trim() || loading"
+          :disabled="!userId.trim() || loading"
         >
           {{ loading ? '登录中...' : '登录（无需密码）' }}
         </button>
       </div>
       <div class="login-tips">
-        <p>提示：输入任意用户名即可登录</p>
+        <p>提示：输入用户ID即可登录</p>
       </div>
     </div>
   </div>
@@ -32,56 +32,88 @@
 
 <script>
 import { useUserStore } from '../stores/user'
-import { useChatStore } from '../stores/chat'
+import { loginApi } from '../services/api'
 
 export default {
   name: 'Login',
   setup() {
     const userStore = useUserStore()
-    const chatStore = useChatStore()
-    
+
     return {
-      userStore,
-      chatStore
+      userStore
     }
   },
   data() {
     return {
-      username: '',
+      userId: '',
       loading: false
     }
   },
   methods: {
     async handleLogin() {
-      if (!this.username.trim() || this.loading) return
-      
-      this.loading = true
-      
-      try {
-        // 模拟登录延迟
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // 创建用户信息
-        const userInfo = {
-          username: this.username,
-          userId: Date.now(),
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.username}`,
-          createdAt: new Date().toISOString()
+      if (!this.userId.trim() || this.loading) {
+        if (!this.userId.trim()) {
+          alert('请输入用户ID');
         }
-        
-        // 使用store管理用户状态
-        this.userStore.setUserInfo(userInfo)
-        
-        // 初始化聊天模拟数据
-        this.chatStore.initMockData()
-        
+        return;
+      }
+      console.log('开始登录流程，用户ID:', this.userId)
+
+      this.loading = true;
+      try {
+        // 首先尝试调用真实登录API
+        console.log('准备调用登录API')
+        let response = null;
+        let userData = null;
+
+        try {
+            response = await loginApi.login({ userId: this.userId })
+            console.log('登录API返回数据:', response)
+
+            // 根据API文档，响应数据包含success、data、message字段
+            if (response && response.success && response.data) {
+              // API调用成功，使用API返回的用户数据
+              userData = {
+                ...response.data,
+                avatar: response.data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${response.data.username || this.userId}`,
+                token: `mock-token-${Date.now()}`,
+                userId: response.data.userId || this.userId,
+                username: response.data.username || `用户${this.userId}`
+              };
+            } else {
+              throw new Error('API返回数据格式不正确');
+            }
+        } catch (apiError) {
+          console.log('API调用失败，使用本地模拟登录:', apiError.message)
+          // API调用失败，使用本地模拟登录
+          userData = {
+            userId: this.userId,
+            username: `用户${this.userId}`,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.userId}`,
+            token: `mock-token-${Date.now()}`,
+            lastLogin: new Date().toISOString()
+          };
+        }
+
+        console.log('使用用户数据:', userData)
+
+        // 保存用户信息到store
+        this.userStore.setUserInfo(userData)
+
+        // 同时保存到localStorage
+        localStorage.setItem('user', JSON.stringify(userData))
+        localStorage.setItem('token', userData.token)
+
+        console.log('用户信息已保存，准备跳转')
         // 跳转到个人主页
-        this.$router.push('/profile')
+        this.$router.push('/profile');
       } catch (error) {
         console.error('登录失败:', error)
-        alert('登录失败，请重试')
+        // 显示详细错误信息
+        alert(`登录失败: ${error.message || '未知错误'}\n状态码: ${error.status || 'N/A'}`)
       } finally {
-        this.loading = false
+        console.log('登录流程结束')
+        this.loading = false;
       }
     }
   },

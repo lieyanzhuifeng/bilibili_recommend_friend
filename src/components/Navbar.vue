@@ -6,42 +6,60 @@
           <span class="logo-text">哔哩哔哩</span>
         </router-link>
       </div>
-      
+
       <div class="navbar-menu">
-        <router-link 
-          to="/profile" 
-          class="nav-item" 
+        <router-link
+          to="/profile"
+          class="nav-item"
           :class="{ active: currentRoute === '/profile' }"
         >
           <i class="nav-icon">👤</i>
           <span>个人主页</span>
         </router-link>
-        
-        <router-link 
-          to="/friends" 
-          class="nav-item" 
+
+        <router-link
+          to="/friends"
+          class="nav-item"
           :class="{ active: currentRoute === '/friends' }"
         >
           <i class="nav-icon">👥</i>
           <span>好友</span>
           <span v-if="totalUnreadCount > 0" class="badge">{{ totalUnreadCount }}</span>
         </router-link>
-        
-        <router-link 
-          to="/user-info" 
-          class="nav-item" 
+
+        <router-link
+          to="/friend-management"
+          class="nav-item"
+          :class="{ active: currentRoute === '/friend-management' }"
+        >
+          <i class="nav-icon">🔄</i>
+          <span>好友管理</span>
+        </router-link>
+
+        <router-link
+          to="/user-info"
+          class="nav-item"
           :class="{ active: currentRoute === '/user-info' }"
         >
           <i class="nav-icon">📝</i>
           <span>个人信息</span>
         </router-link>
+
+        <router-link
+          to="/recommendations"
+          class="nav-item"
+          :class="{ active: currentRoute === '/recommendations' }"
+        >
+          <i class="nav-icon">🔍</i>
+          <span>推荐</span>
+        </router-link>
       </div>
-      
+
       <div class="navbar-user">
         <div class="user-info">
-          <img 
-            :src="userStore.avatar" 
-            alt="用户头像" 
+          <img
+            :src="userStore.avatar"
+            alt="用户头像"
             class="user-avatar"
           />
           <span class="user-name">{{ userStore.username }}</span>
@@ -63,7 +81,7 @@ export default {
   setup() {
     const userStore = useUserStore()
     const chatStore = useChatStore()
-    
+
     return {
       userStore,
       chatStore
@@ -82,7 +100,7 @@ export default {
     if (!this.userStore.isLoggedIn) {
       this.userStore.loadUserInfo()
     }
-    
+
     // 如果没有登录，重定向到登录页
     if (!this.userStore.isLoggedIn) {
       this.$router.push('/')
@@ -231,11 +249,11 @@ export default {
   .navbar-menu {
     gap: 15px;
   }
-  
+
   .nav-item span {
     display: none;
   }
-  
+
   .user-name {
     display: none;
   }

@@ -35,6 +35,17 @@ const router = createRouter({
           name: 'chat',
           component: () => import('../views/Chat.vue')
         }
+        ,
+        {
+          path: 'recommendations',
+          name: 'recommendations',
+          component: () => import('../views/Recommendations.vue')
+        },
+        {
+          path: 'friend-management',
+          name: 'friendManagement',
+          component: () => import('../views/FriendManagement.vue')
+        }
       ]
     }
   ]
@@ -44,14 +55,14 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 获取用户store
   const userStore = useUserStore()
-  
+
   // 检查是否需要认证
   if (to.meta.requiresAuth) {
     // 如果用户未登录，尝试从localStorage加载用户信息
     if (!userStore.isLoggedIn) {
       userStore.loadUserInfo()
     }
-    
+
     // 检查是否已登录
     if (!userStore.isLoggedIn) {
       // 没有登录信息，重定向到登录页

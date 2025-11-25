@@ -1,13 +1,13 @@
 <template>
   <div class="user-info-container">
     <h1>编辑个人信息</h1>
-    
+
     <Card class="profile-form-card">
       <form @submit.prevent="handleSubmit" class="profile-form">
         <!-- 头像编辑 -->
         <div class="form-section">
           <h2 class="section-title">基本信息</h2>
-          
+
           <div class="avatar-upload-section">
             <div class="avatar-preview">
               <img :src="formData.avatar" alt="用户头像" class="avatar-img" />
@@ -16,11 +16,11 @@
                   <i class="upload-icon">📷</i>
                   更换头像
                 </button>
-                <input 
-                  ref="avatarInput" 
-                  type="file" 
-                  accept="image/*" 
-                  style="display: none" 
+                <input
+                  ref="avatarInput"
+                  type="file"
+                  accept="image/*"
+                  style="display: none"
                   @change="handleAvatarChange"
                 />
               </div>
@@ -30,10 +30,10 @@
           <!-- 用户名 -->
           <div class="form-group">
             <label for="username" class="form-label">用户名</label>
-            <input 
-              type="text" 
-              id="username" 
-              v-model="formData.username" 
+            <input
+              type="text"
+              id="username"
+              v-model="formData.username"
               class="form-input"
               :class="{ error: errors.username }"
               placeholder="请输入用户名"
@@ -46,9 +46,9 @@
           <!-- 简介 -->
           <div class="form-group">
             <label for="bio" class="form-label">个人简介</label>
-            <textarea 
-              id="bio" 
-              v-model="formData.bio" 
+            <textarea
+              id="bio"
+              v-model="formData.bio"
               class="form-textarea"
               :class="{ error: errors.bio }"
               placeholder="介绍一下自己吧~"
@@ -63,13 +63,13 @@
         <!-- 联系信息 -->
         <div class="form-section">
           <h2 class="section-title">联系信息</h2>
-          
+
           <div class="form-group">
             <label for="email" class="form-label">邮箱 <span class="optional">(选填)</span></label>
-            <input 
-              type="email" 
-              id="email" 
-              v-model="formData.email" 
+            <input
+              type="email"
+              id="email"
+              v-model="formData.email"
               class="form-input"
               :class="{ error: errors.email }"
               placeholder="请输入邮箱地址"
@@ -79,10 +79,10 @@
 
           <div class="form-group">
             <label for="phone" class="form-label">手机号码 <span class="optional">(选填)</span></label>
-            <input 
-              type="tel" 
-              id="phone" 
-              v-model="formData.phone" 
+            <input
+              type="tel"
+              id="phone"
+              v-model="formData.phone"
               class="form-input"
               :class="{ error: errors.phone }"
               placeholder="请输入手机号码"
@@ -94,33 +94,33 @@
         <!-- 偏好设置 -->
         <div class="form-section">
           <h2 class="section-title">偏好设置</h2>
-          
+
           <div class="form-group">
             <label class="form-label">主题偏好</label>
             <div class="theme-options">
               <label class="theme-option">
-                <input 
-                  type="radio" 
-                  name="theme" 
-                  value="light" 
+                <input
+                  type="radio"
+                  name="theme"
+                  value="light"
                   v-model="formData.theme"
                 />
                 <span class="theme-label">浅色模式</span>
               </label>
               <label class="theme-option">
-                <input 
-                  type="radio" 
-                  name="theme" 
-                  value="dark" 
+                <input
+                  type="radio"
+                  name="theme"
+                  value="dark"
                   v-model="formData.theme"
                 />
                 <span class="theme-label">深色模式</span>
               </label>
               <label class="theme-option">
-                <input 
-                  type="radio" 
-                  name="theme" 
-                  value="system" 
+                <input
+                  type="radio"
+                  name="theme"
+                  value="system"
                   v-model="formData.theme"
                 />
                 <span class="theme-label">跟随系统</span>
@@ -130,8 +130,8 @@
 
           <div class="form-group">
             <label class="checkbox-label">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 v-model="formData.notifications"
               />
               <span>接收消息通知</span>
@@ -140,8 +140,8 @@
 
           <div class="form-group">
             <label class="checkbox-label">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 v-model="formData.publicProfile"
               />
               <span>公开个人资料</span>
@@ -152,7 +152,7 @@
         <!-- 账号安全 -->
         <div class="form-section">
           <h2 class="section-title">账号安全</h2>
-          
+
           <div class="security-info">
             <div class="security-item">
               <span class="security-label">账号状态：</span>
@@ -167,7 +167,7 @@
               <span class="security-value">{{ lastLoginTime }}</span>
             </div>
           </div>
-          
+
           <div class="security-actions">
             <Button type="outline" size="medium" @click="showChangePasswordModal = true">
               修改密码
@@ -183,9 +183,9 @@
           <Button type="secondary" size="large" @click="handleCancel">
             取消
           </Button>
-          <Button 
-            type="primary" 
-            size="large" 
+          <Button
+            type="primary"
+            size="large"
             @click="handleSubmit"
             :loading="isSubmitting"
           >
@@ -206,30 +206,30 @@
           <form @submit.prevent="handleChangePassword" class="password-form">
             <div class="form-group">
               <label for="oldPassword" class="form-label">当前密码</label>
-              <input 
-                type="password" 
-                id="oldPassword" 
-                v-model="passwordForm.oldPassword" 
+              <input
+                type="password"
+                id="oldPassword"
+                v-model="passwordForm.oldPassword"
                 class="form-input"
                 placeholder="请输入当前密码"
               />
             </div>
             <div class="form-group">
               <label for="newPassword" class="form-label">新密码</label>
-              <input 
-                type="password" 
-                id="newPassword" 
-                v-model="passwordForm.newPassword" 
+              <input
+                type="password"
+                id="newPassword"
+                v-model="passwordForm.newPassword"
                 class="form-input"
                 placeholder="请输入新密码（6-20位）"
               />
             </div>
             <div class="form-group">
               <label for="confirmPassword" class="form-label">确认新密码</label>
-              <input 
-                type="password" 
-                id="confirmPassword" 
-                v-model="passwordForm.confirmPassword" 
+              <input
+                type="password"
+                id="confirmPassword"
+                v-model="passwordForm.confirmPassword"
                 class="form-input"
                 placeholder="请再次输入新密码"
               />
@@ -241,9 +241,9 @@
               <Button type="secondary" size="medium" @click="closeChangePasswordModal">
                 取消
               </Button>
-              <Button 
-                type="primary" 
-                size="medium" 
+              <Button
+                type="primary"
+                size="medium"
                 @click="handleChangePassword"
                 :loading="isChangingPassword"
               >
@@ -266,10 +266,10 @@
           <form @submit.prevent="handleBindPhone" class="phone-form">
             <div class="form-group">
               <label for="bindPhone" class="form-label">手机号码</label>
-              <input 
-                type="tel" 
-                id="bindPhone" 
-                v-model="phoneForm.phone" 
+              <input
+                type="tel"
+                id="bindPhone"
+                v-model="phoneForm.phone"
                 class="form-input"
                 placeholder="请输入手机号码"
               />
@@ -277,16 +277,16 @@
             <div class="form-group">
               <label for="verificationCode" class="form-label">验证码</label>
               <div class="verification-code-container">
-                <input 
-                  type="text" 
-                  id="verificationCode" 
-                  v-model="phoneForm.verificationCode" 
+                <input
+                  type="text"
+                  id="verificationCode"
+                  v-model="phoneForm.verificationCode"
                   class="form-input verification-input"
                   placeholder="请输入验证码"
                 />
-                <Button 
-                  type="outline" 
-                  size="medium" 
+                <Button
+                  type="outline"
+                  size="medium"
                   class="send-code-btn"
                   :disabled="countdown > 0"
                   @click="sendVerificationCode"
@@ -302,9 +302,9 @@
               <Button type="secondary" size="medium" @click="closeBindPhoneModal">
                 取消
               </Button>
-              <Button 
-                type="primary" 
-                size="medium" 
+              <Button
+                type="primary"
+                size="medium"
                 @click="handleBindPhone"
                 :loading="isBindingPhone"
               >
@@ -341,7 +341,7 @@ export default {
     const router = useRouter()
     const userStore = useUserStore()
     const avatarInput = ref(null)
-    
+
     // 表单数据
     const formData = reactive({
       username: '',
@@ -412,7 +412,7 @@ export default {
 
     const validateForm = () => {
       let isValid = true
-      
+
       // 清空错误信息
       Object.keys(errors).forEach(key => {
         errors[key] = ''
@@ -448,11 +448,11 @@ export default {
       }
 
       isSubmitting.value = true
-      
+
       try {
         // 模拟API请求延迟
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         // 更新用户信息
         userStore.updateUserInfo({
           username: formData.username,
@@ -547,11 +547,11 @@ export default {
       try {
         // 模拟API请求延迟
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         // 模拟修改密码成功
         closeChangePasswordModal()
         showSuccess('密码修改成功！')
-      } catch (error) {
+      } catch {
         passwordError.value = '修改密码失败，请稍后重试'
       } finally {
         isChangingPassword.value = false
@@ -625,12 +625,12 @@ export default {
       try {
         // 模拟API请求延迟
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         // 模拟绑定成功
         formData.phone = phoneForm.phone
         closeBindPhoneModal()
         showSuccess('手机号绑定成功！')
-      } catch (error) {
+      } catch {
         phoneError.value = '绑定手机号失败，请稍后重试'
       } finally {
         isBindingPhone.value = false
@@ -1088,28 +1088,28 @@ export default {
   .user-info-container {
     padding: 15px;
   }
-  
+
   .theme-options {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .security-actions {
     flex-direction: column;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .modal-actions {
     flex-direction: column;
   }
-  
+
   .verification-code-container {
     flex-direction: column;
   }
-  
+
   .send-code-btn {
     width: 100%;
   }

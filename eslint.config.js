@@ -21,4 +21,31 @@ export default defineConfig([
 
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
+
+  // Node scripts (tools) may use `process` and other node globals
+  {
+    files: ['scripts/**'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      }
+    }
+  },
+
+  // Relax some Vue-specific naming rules for this project (single-word components used)
+  {
+    files: ['src/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      'vue/no-reserved-component-names': 'off'
+    }
+  },
+
+  // Fallback global rules
+  {
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      'vue/no-reserved-component-names': 'off'
+    }
+  }
 ])

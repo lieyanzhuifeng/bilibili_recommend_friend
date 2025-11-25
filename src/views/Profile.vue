@@ -5,13 +5,13 @@
       <div class="profile-cover">
         <div class="cover-overlay">
           <div class="avatar-section">
-            <img 
-              :src="userStore.avatar" 
-              alt="用户头像" 
+            <img
+              :src="userStore.avatar"
+              alt="用户头像"
               class="user-avatar"
             />
             <div class="user-info">
-              <h1 class="username">{{ userStore.username }}</h1>
+              <h1 class="username">{{ displayName }}</h1>
               <p class="user-id">UID: {{ userStore.userId }}</p>
               <div class="user-stats">
                 <div class="stat-item">
@@ -36,22 +36,22 @@
     <!-- 内容导航 -->
     <div class="content-nav">
       <div class="nav-tabs">
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'activities' }"
           @click="activeTab = 'activities'"
         >
           动态
         </button>
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'collections' }"
           @click="activeTab = 'collections'"
         >
           收藏
         </button>
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'history' }"
           @click="activeTab = 'history'"
         >
@@ -94,13 +94,13 @@
             <h3>最近互动好友</h3>
           </template>
           <div class="friends-list">
-            <div 
-              v-for="friend in recentFriends" 
-              :key="friend.id" 
+            <div
+              v-for="friend in recentFriends"
+              :key="friend.id"
               class="friend-item"
               @click="goToChat(friend.id)"
             >
-              <img :src="friend.avatar" alt="好友头像" class="friend-avatar" />
+              <img :src="avatar(friend)" alt="好友头像" class="friend-avatar" />
               <span class="friend-name">{{ friend.name }}</span>
               <span v-if="friend.unread > 0" class="unread-badge">{{ friend.unread }}</span>
             </div>
@@ -111,6 +111,30 @@
             </router-link>
           </template>
         </Card>
+            <Card class="recommend-card">
+              <template #title>
+                <h3>推荐好友</h3>
+              </template>
+              <div class="friends-list">
+                <div v-if="recommendStore.loading" class="loading">加载中...</div>
+                <div v-else-if="recommendStore.error" class="error">{{ recommendStore.error }}</div>
+                <div v-else>
+                  <div
+                    v-for="rec in recommendedUsers.slice(0, 6)"
+                    :key="rec.userId || rec.id"
+                    class="friend-item"
+                    @click="goToChat(rec.userId || rec.id)"
+                  >
+                    <img :src="avatar(rec)" alt="推荐头像" class="friend-avatar" />
+                    <span class="friend-name">{{ rec.username || rec.name }}</span>
+                  </div>
+                  <div v-if="recommendedUsers.length === 0" class="empty">暂无推荐，试试刷新</div>
+                </div>
+              </div>
+              <template #footer>
+                <button class="view-all-btn" @click="viewAllRecommendations">查看更多</button>
+              </template>
+            </Card>
       </div>
 
       <!-- 主内容区域 -->
@@ -186,10 +210,12 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { useChatStore } from '../stores/chat'
+import { useRecommendStore } from '../stores/recommend'
+import { avatarUrl } from '@/services/api'
 import Card from '../components/Card.vue'
 
 export default {
@@ -201,6 +227,7 @@ export default {
     const router = useRouter()
     const userStore = useUserStore()
     const chatStore = useChatStore()
+    const recommendStore = useRecommendStore()
     const activeTab = ref('activities')
 
     // 模拟数据
@@ -293,8 +320,54 @@ export default {
     // 计算最近互动的好友
     const recentFriends = ref([])
 
+    // 计算展示名：优先使用 userStore.username，若 username 等于 userId 或为空则尝试从 recommend 列表中取 API 返回的 username
+    const displayName = computed(() => {
+      const uname = userStore.username
+      const uid = userStore.userId
+      if (uname && String(uname) !== String(uid)) return uname
+      const lists = [
+        ...(recommendStore.coComment || []),
+        ...(recommendStore.reply || []),
+        ...(recommendStore.sharedVideo || []),
+        ...(recommendStore.category || []),
+        ...(recommendStore.theme || []),
+        ...(recommendStore.userBehavior || []),
+        ...(recommendStore.commonUp || []),
+        ...(recommendStore.favoriteSimilarity || [])
+      ]
+      for (const u of lists) {
+        const id = u.userId ?? u.id
+        if (String(id) === String(uid) && u.username) return u.username
+      }
+      return uname || (uid ? String(uid) : '')
+    })
+
+    // 合并去重推荐列表
+    const recommendedUsers = computed(() => {
+      const lists = [
+        ...(recommendStore.coComment || []),
+        ...(recommendStore.reply || []),
+        ...(recommendStore.sharedVideo || []),
+        ...(recommendStore.category || []),
+        ...(recommendStore.theme || []),
+        ...(recommendStore.userBehavior || []),
+        ...(recommendStore.commonUp || []),
+        ...(recommendStore.favoriteSimilarity || [])
+      ]
+      const map = new Map()
+      for (const u of lists) {
+        const id = u.userId ?? u.id
+        if (!map.has(id)) map.set(id, u)
+      }
+      return Array.from(map.values())
+    })
+
     const goToChat = (userId) => {
       router.push(`/chat/${userId}`)
+    }
+
+    function avatar(u) {
+      return avatarUrl(u && (u.avatar || u.avatarPath || u.avatarUrl))
     }
 
     onMounted(() => {
@@ -303,11 +376,23 @@ export default {
         userStore.loadUserInfo()
       }
 
+      // 加载推荐数据（若有 userId）
+      const uid = userStore.userId
+      if (uid) {
+        recommendStore.fetchCoComment(uid)
+        recommendStore.fetchReply(uid)
+        recommendStore.fetchSharedVideo(uid)
+      }
       // 从聊天store获取最近互动的好友
       if (chatStore.friends.length > 0) {
         recentFriends.value = chatStore.friends.slice(0, 3)
       }
     })
+
+    const viewAllRecommendations = () => {
+      // 跳转到推荐详情页
+      router.push('/recommendations')
+    }
 
     return {
       userStore,
@@ -316,6 +401,11 @@ export default {
       collections,
       history,
       recentFriends,
+      recommendStore,
+      recommendedUsers,
+      viewAllRecommendations,
+      avatar,
+      displayName,
       goToChat
     }
   }
@@ -687,6 +777,7 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -708,26 +799,26 @@ export default {
   .profile-content {
     grid-template-columns: 1fr;
   }
-  
+
   .sidebar-left {
     display: none;
   }
-  
+
   .avatar-section {
     flex-direction: column;
     text-align: center;
     padding-bottom: 20px;
   }
-  
+
   .user-avatar {
     width: 80px;
     height: 80px;
   }
-  
+
   .user-info h1 {
     font-size: 20px;
   }
-  
+
   .user-stats {
     gap: 20px;
   }
