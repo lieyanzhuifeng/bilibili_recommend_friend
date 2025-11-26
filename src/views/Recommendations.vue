@@ -1,1063 +1,684 @@
 <template>
-  <div class="recommendations-page">
-    <h2>好友推荐</h2>
+  <div class="recommendations-container">
+    <h1 class="page-title">用户推荐系统</h1>
 
-    <div class="controls">
-      <!-- 推荐API按钮组 -->
-      <div class="recommend-api-buttons">
-        <h3>选择推荐方式</h3>
-        <div class="api-buttons">
-          <button
-            v-for="api in recommendApis"
-            :key="api.key"
-            @click="fetchRecommendByApi(api.key)"
-            :disabled="loading || currentApi === api.key"
-            :class="['api-btn', { active: currentApi === api.key }]"
-          >
-            {{ api.name }}
-          </button>
-        </div>
-      </div>
-
-      <div class="filter-section">
-        <h3>推荐筛选</h3>
-        <div class="filter-controls">
-          <select v-model="activeFilter" @change="applyFilter">
-            <option value="all">全部推荐</option>
-            <option value="commonUp">共同关注UP主</option>
-            <option value="sharedVideo">共享视频</option>
-            <option value="userBehavior">用户行为相似度</option>
-            <option value="coComment">同视频评论</option>
-            <option value="theme">内容类型重合度</option>
-          </select>
-
-          <!-- 筛选参数输入 -->
-          <div v-if="activeFilter === 'sameUp'" class="filter-params">
-            <input v-model="filterParams.upId" placeholder="UP主ID" type="number" />
-            <select v-model="filterParams.durationOption">
-              <option value="week">近一周</option>
-              <option value="month">近一月</option>
-              <option value="year">近一年</option>
-            </select>
-          </div>
-
-          <div v-if="activeFilter === 'sameTag'" class="filter-params">
-            <input v-model="filterParams.tagId" placeholder="标签ID" type="number" />
-            <select v-model="filterParams.durationOption">
-              <option value="week">近一周</option>
-              <option value="month">近一月</option>
-              <option value="year">近一年</option>
-            </select>
-          </div>
-
-          <div v-if="activeFilter === 'sameTagVideoCount'" class="filter-params">
-            <input v-model="filterParams.tagId" placeholder="标签ID" type="number" />
-            <input v-model="filterParams.ratioOption" placeholder="观看比例阈值" type="number" step="0.1" min="0" max="1" />
-          </div>
-
-          <div v-if="activeFilter === 'deepVideo'" class="filter-params">
-            <input v-model="filterParams.videoId" placeholder="视频ID" type="number" />
-            <select v-model="filterParams.option">
-              <option value="fullWatch">完整观看</option>
-              <option value="highInteraction">高互动</option>
-            </select>
-          </div>
-
-          <button @click="applyFilter" :disabled="loading">
-            {{ loading ? '筛选中...' : '应用筛选' }}
-          </button>
-        </div>
-      </div>
-
-      <button @click="fetchAll" :disabled="loading">
-        {{ loading ? '加载中...' : '刷新全部推荐' }}
+    <!-- API选择按钮区域 -->
+    <div class="api-buttons">
+      <button
+        v-for="api in recommendApis"
+        :key="api.key"
+        class="api-button"
+        :class="{ active: selectedApis.includes(api.key) }"
+        @click="toggleApiSelection(api.key)"
+      >
+        {{ api.name }}
       </button>
     </div>
 
-    <!-- 提示消息 -->
-    <div v-if="notification" :class="['notification', notification.type]">
-      {{ notification.message }}
-      <button @click="clearNotification" class="close-btn">×</button>
+    <!-- 获取推荐按钮 -->
+    <div class="action-section">
+      <button
+        class="fetch-button"
+        :disabled="selectedApis.length === 0 || loading"
+        @click="fetchRecommendations"
+      >
+        {{ loading ? '获取中...' : '获取推荐' }}
+      </button>
+
+      <div v-if="selectedApis.length > 0" class="selected-count">
+        已选择 {{ selectedApis.length }} 个推荐来源
+      </div>
     </div>
 
-    <!-- API推荐结果展示区域 -->
-    <div v-if="currentApi" class="api-results-section">
-      <h3>{{ apiResultsTitle }}</h3>
-      <div v-if="apiResults.length > 0" class="user-cards">
-        <div v-for="user in apiResults" :key="user.userId || user.id" class="user-card">
-          <img :src="avatar(user)" alt="{{ user.username }}" class="avatar" />
+    <!-- 推荐结果展示区域 -->
+    <div v-if="filteredResults.length > 0" class="results-section">
+      <h2 class="results-title">推荐结果 ({{ filteredResults.length }})</h2>
+
+      <div class="user-grid">
+        <div
+          v-for="user in filteredResults"
+          :key="user.userId"
+          class="user-card"
+          @mouseenter="showTooltip(user, $event)"
+          @mouseleave="hideTooltip"
+        >
+          <div class="user-avatar">
+            <img :src="user.avatarPath || defaultAvatar" alt="用户头像">
+          </div>
           <div class="user-info">
-            <div class="username">{{ user.username }}</div>
-            <div class="user-stats">
-              <span v-if="user.commonUpCount" class="stat-item">共同关注: {{ user.commonUpCount }}</span>
-              <span v-if="user.sharedVideoCount" class="stat-item">共享视频: {{ user.sharedVideoCount }}</span>
-              <span v-if="user.commentCount" class="stat-item">评论数: {{ user.commentCount }}</span>
-              <span v-if="user.similarityRate" class="stat-item similarity-rate">相似度: {{ user.similarityRate }}%</span>
-              <span v-if="user.score && !user.similarityRate" class="stat-item similarity-rate">匹配分数: {{ user.score }}</span>
-            </div>
+            <h3 class="username">{{ user.username }}</h3>
+            <p class="similarity-rate">相似度: {{ getHighestSimilarity(user) }}%</p>
           </div>
-          <button
-            class="add-friend-btn"
-            @click="sendFriendRequest(user.userId || user.id, user.username)"
-            :disabled="isRequesting(user.userId || user.id)"
-          >
-            {{ getRequestStatus(user.userId || user.id) }}
-          </button>
         </div>
       </div>
-      <div v-else-if="loading" class="loading-placeholder">
-        加载中...
-      </div>
-      <div v-else class="empty-state">
-        暂无推荐结果
-      </div>
-    </div>
-
-    <div class="sections">
-      <section v-if="coComment.length">
-        <h3>同视频评论推荐</h3>
-        <div class="recommend-grid">
-          <div v-for="u in coComment" :key="u.userId || u.id" class="user-card">
-            <img :src="avatar(u)" alt="{{ u.username }}" class="avatar"/>
-            <div class="user-info">
-              <div class="username">{{ u.username }}</div>
-              <div v-if="u.commentCount" class="info">评论: {{ u.commentCount }}条</div>
-            </div>
-            <button
-              class="add-friend-btn"
-              @click="sendFriendRequest(u.userId || u.id, u.username)"
-              :disabled="isRequesting(u.userId || u.id)"
-            >
-              {{ getRequestStatus(u.userId || u.id) }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section v-if="reply.length">
-        <h3>回复推荐</h3>
-        <div class="recommend-grid">
-          <div v-for="u in reply" :key="u.userId || u.id" class="user-card">
-            <img :src="avatar(u)" alt="{{ u.username }}" class="avatar"/>
-            <div class="user-info">
-              <div class="username">{{ u.username }}</div>
-              <div v-if="u.replyCount" class="info">回复: {{ u.replyCount }}条</div>
-            </div>
-            <button
-              class="add-friend-btn"
-              @click="sendFriendRequest(u.userId || u.id, u.username)"
-              :disabled="isRequesting(u.userId || u.id)"
-            >
-              {{ getRequestStatus(u.userId || u.id) }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section v-if="sharedVideo.length">
-        <h3>观看视频相似度推荐</h3>
-        <div class="recommend-grid">
-          <div v-for="u in sharedVideo" :key="u.userId || u.id" class="user-card">
-            <img :src="avatar(u)" alt="{{ u.username }}" class="avatar"/>
-            <div class="user-info">
-              <div class="username">{{ u.username }}</div>
-              <div class="info">相似度: {{ u.similarityRate }}%</div>
-              <div v-if="u.sharedVideoCount" class="info">共同观看: {{ u.sharedVideoCount }}个视频</div>
-            </div>
-            <button
-              class="add-friend-btn"
-              @click="sendFriendRequest(u.userId || u.id, u.username)"
-              :disabled="isRequesting(u.userId || u.id)"
-            >
-              {{ getRequestStatus(u.userId || u.id) }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- 筛选结果显示 -->
-      <section v-if="showFilteredResults">
-        <h3>{{ filterTitle }}</h3>
-        <div class="recommend-grid">
-          <div v-for="u in filteredResults" :key="u.userId || u.id" class="user-card">
-            <img :src="avatar(u)" alt="{{ u.username }}" class="avatar"/>
-            <div class="user-info">
-              <div class="username">{{ u.username }}</div>
-              <div v-if="u.similarityRate" class="info">相似度: {{ u.similarityRate }}%</div>
-              <div v-else-if="u.score" class="info">匹配度: {{ u.score }}</div>
-              <div v-if="u.sharedVideoCount" class="info">共同观看: {{ u.sharedVideoCount }}个视频</div>
-              <div v-if="u.commentCount" class="info">评论: {{ u.commentCount }}条</div>
-              <div v-if="u.commonUpCount" class="info">共同关注UP主: {{ u.commonUpCount }}个</div>
-              <div v-if="u.watchRatio" class="info">观看比例: {{ (u.watchRatio * 100).toFixed(1) }}%</div>
-            </div>
-            <button
-              class="add-friend-btn"
-              @click="sendFriendRequest(u.userId || u.id, u.username)"
-              :disabled="isRequesting(u.userId || u.id)"
-            >
-              {{ getRequestStatus(u.userId || u.id) }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section v-if="!showFilteredResults && otherLists.length">
-        <h3>其他推荐</h3>
-        <div class="recommend-grid">
-          <div v-for="u in otherLists" :key="u.userId || u.id" class="user-card">
-            <img :src="avatar(u)" alt="{{ u.username }}" class="avatar"/>
-            <div class="user-info">
-              <div class="username">{{ u.username }}</div>
-              <div v-if="u.score" class="info">匹配度: {{ u.score }}</div>
-            </div>
-            <button
-              class="add-friend-btn"
-              @click="sendFriendRequest(u.userId || u.id, u.username)"
-              :disabled="isRequesting(u.userId || u.id)"
-            >
-              {{ getRequestStatus(u.userId || u.id) }}
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
 
     <!-- 空状态 -->
-    <div v-if="!loading && isAllEmpty" class="empty-state">
-      <p>暂无推荐好友</p>
-      <button @click="fetchAll">尝试重新加载</button>
+    <div v-else-if="!loading && selectedApis.length > 0" class="empty-state">
+      <p>没有找到符合条件的用户推荐</p>
+    </div>
+
+    <!-- 提示信息 -->
+    <div v-if="message" class="message" :class="messageType">
+      {{ message }}
+    </div>
+
+    <!-- 悬停提示框 -->
+    <div
+      v-if="tooltipVisible"
+      class="tooltip"
+      :style="tooltipStyle"
+    >
+      <div class="tooltip-header">
+        <h4>{{ tooltipUser?.username }}</h4>
+      </div>
+      <div class="tooltip-content">
+        <div
+          v-for="(value, key) in getDetailedInfo(tooltipUser)"
+          :key="key"
+          class="tooltip-item"
+        >
+          <span class="tooltip-label">{{ formatKey(key) }}:</span>
+          <span class="tooltip-value">{{ formatValue(value, key) }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script>
-import { onMounted, computed, ref } from 'vue'
-import { useRecommendStore } from '../stores/recommend'
-import { useUserStore } from '../stores/user'
-import { friendApi, recommendApi, filterApi } from '../services/api'
-import { useRouter } from 'vue-router'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+// 移除不存在的store导入
+// import { useRecommendStore } from '@/store/recommend'
+// import { useUserStore } from '@/store/user'
+import { recommendApi } from '@/services/api'
 
-export default {
-  name: 'Recommendations',
-  setup() {
-    const recommendStore = useRecommendStore()
-    const userStore = useUserStore()
-    const router = useRouter()
-
-    // 请求状态管理
-    const requestStatus = ref({})
-    const notification = ref(null)
-    const loading = computed(() => recommendStore.loading)
-
-    // 筛选相关状态
-    const activeFilter = ref('all')
-    const filterParams = ref({
-      upId: '',
-      tagId: '',
-      videoId: '',
-      durationOption: 'month',
-      ratioOption: 0.5,
-      option: 'fullWatch'
-    })
-    const filteredResults = ref([])
-
-    // 推荐API相关状态
-    const currentApi = ref(null)
-    const apiResults = ref([])
-    const apiResultsTitle = ref('')
-
-    // 推荐API列表
-    const recommendApis = [
-      { key: 'commonUp', name: '共同关注UP主', title: '共同关注UP主的用户推荐' },
-      { key: 'sharedVideo', name: '共享视频', title: '观看视频相似度推荐' },
-      { key: 'userBehavior', name: '用户行为相似度', title: '用户行为相似度推荐' },
-      { key: 'coComment', name: '同视频评论', title: '同视频评论用户推荐' },
-      { key: 'theme', name: '内容类型重合度', title: '内容类型重合度推荐' }
-    ]
-
-    // 模拟数据 - 每种推荐类型都有独特的模拟用户
-    const mockData = {
-      commonUp: [
-        { userId: 101, username: '动漫爱好者小A', commonUpCount: 12, similarityRate: 85, commonUpNames: ['动漫小站', '二次元研究所'] },
-        { userId: 102, username: '科技迷小王', commonUpCount: 8, similarityRate: 72, commonUpNames: ['科技最前线', '数码评测室'] },
-        { userId: 103, username: '游戏玩家小李', commonUpCount: 15, similarityRate: 90, commonUpNames: ['游戏解说UP', '电竞俱乐部'] },
-        { userId: 104, username: '音乐制作人小张', commonUpCount: 10, similarityRate: 78, commonUpNames: ['音乐教室', '乐器大师'] },
-        { userId: 105, username: '美食博主小陈', commonUpCount: 13, similarityRate: 82, commonUpNames: ['美食家', '烘焙达人'] }
-      ],
-      sharedVideo: [
-        { userId: 201, username: '电影收藏家老周', sharedVideoCount: 35, similarityRate: 88, lastWatched: '《星际穿越》影评' },
-        { userId: 202, username: '音乐发烧友小吴', sharedVideoCount: 27, similarityRate: 76, lastWatched: '2024流行音乐盘点' },
-        { userId: 203, username: '美食达人小赵', sharedVideoCount: 42, similarityRate: 92, lastWatched: '家常菜教程合集' },
-        { userId: 204, username: '旅行摄影师小郑', sharedVideoCount: 31, similarityRate: 84, lastWatched: '环球旅行Vlog' },
-        { userId: 205, username: '编程学习者小刘', sharedVideoCount: 29, similarityRate: 80, lastWatched: 'Python入门教程' }
-      ],
-      userBehavior: [
-        { userId: 301, username: '夜猫子阿杰', score: 85, activeTime: '晚上22点-凌晨2点', behaviorType: '深度观看' },
-        { userId: 302, username: '早鸟阿敏', score: 78, activeTime: '早上6点-9点', behaviorType: '快速浏览' },
-        { userId: 303, username: '周末战士阿强', score: 91, activeTime: '周六日全天', behaviorType: '高互动' },
-        { userId: 304, username: '上班族阿丽', score: 75, activeTime: '午休和下班后', behaviorType: '碎片时间' },
-        { userId: 305, username: '学生党阿伟', score: 87, activeTime: '晚上8点-11点', behaviorType: '系统性学习' }
-      ],
-      coComment: [
-        { userId: 401, username: '评论活跃者阿红', commentCount: 234, similarityRate: 79, avgCommentLength: 56, frequentTopics: ['电影讨论'] },
-        { userId: 402, username: '深度思考者阿蓝', commentCount: 156, similarityRate: 83, avgCommentLength: 120, frequentTopics: ['技术分析'] },
-        { userId: 403, username: '话题引导者阿紫', commentCount: 312, similarityRate: 87, avgCommentLength: 88, frequentTopics: ['创意讨论'] },
-        { userId: 404, username: '幽默评论员阿黄', commentCount: 189, similarityRate: 77, avgCommentLength: 45, frequentTopics: ['搞笑梗'] },
-        { userId: 405, username: '专业评论家阿绿', commentCount: 143, similarityRate: 85, avgCommentLength: 156, frequentTopics: ['专业评测'] }
-      ],
-      theme: [
-        { userId: 501, username: '技术控阿牛', similarityRate: 89, favoriteThemes: ['人工智能', '前端开发'], contentPreference: '深度技术内容' },
-        { userId: 502, username: '创意达人阿花', similarityRate: 77, favoriteThemes: ['设计', '创意'], contentPreference: '视觉创意内容' },
-        { userId: 503, username: '生活方式博主阿草', similarityRate: 82, favoriteThemes: ['生活技巧', '家居'], contentPreference: '实用生活内容' },
-        { userId: 504, username: '健康爱好者阿树', similarityRate: 79, favoriteThemes: ['健身', '营养'], contentPreference: '健康养生内容' },
-        { userId: 505, username: '财经达人阿金', similarityRate: 84, favoriteThemes: ['投资', '理财'], contentPreference: '财经分析内容' }
-      ]
-    }
-
-    // 生成随机头像
-      function avatar(u) {
-        if (u && u.avatar) return u.avatar
-        const name = u && u.username ? u.username : 'User'
-        const colors = ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#673AB7', '#FF9800']
-        const color = colors[name.charCodeAt(0) % colors.length]
-        const initial = name.charAt(0).toUpperCase()
-        return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="${color}"/><text x="50%" y="50%" font-size="16" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`
-      }
-
-      // 根据API类型获取推荐数据
-      async function fetchRecommendByApi(apiKey) {
-        // 确保当前API已设置
-        currentApi.value = apiKey
-        // 清空之前的结果
-        apiResults.value = []
-
-        // 找到对应的API配置
-        const apiConfig = recommendApis.find(api => api.key === apiKey)
-        if (apiConfig) {
-          apiResultsTitle.value = apiConfig.title
-        }
-
-        showNotification(`正在获取${apiConfig?.name || apiKey}推荐...`, 'info')
-
-        try {
-          // 确保模拟数据存在，如果不存在则记录警告
-          if (!mockData[apiKey]) {
-            console.warn(`警告: ${apiKey} 的模拟数据不存在`)
-            // 创建空数组防止后续错误
-            mockData[apiKey] = []
-          }
-
-          let result
-          const id = userStore.userId || 1
-
-          // 根据API类型调用不同的接口
-          switch (apiKey) {
-            case 'commonUp':
-              result = await recommendStore.fetchCommonUp(id)
-              break
-            case 'sharedVideo':
-              result = await recommendStore.fetchSharedVideo(id)
-              break
-            case 'userBehavior':
-              result = await recommendStore.fetchUserBehavior(id)
-              break
-            case 'coComment':
-              result = await recommendStore.fetchCoComment(id)
-              break
-            case 'theme':
-              result = await recommendStore.fetchTheme(id)
-              break
-            default:
-              throw new Error(`未知的API类型: ${apiKey}`)
-          }
-
-          // 验证结果有效性
-          const isValidResult = result && Array.isArray(result) && result.length > 0
-
-          if (isValidResult) {
-            // 处理并显示真实数据
-            apiResults.value = result.map(item => ({
-              ...item,
-              // 确保所有结果都有必要的字段
-              username: item.username || `用户${item.userId || item.id}`,
-              similarityRate: item.similarityRate || item.score || 0
-            }))
-            showNotification(`${apiConfig?.name}推荐获取成功`, 'success')
-          } else {
-            // 当API返回空结果时，使用模拟数据
-            console.log(`API返回空结果，使用模拟数据`)
-            useMockDataForApi(apiKey, apiConfig)
-          }
-        } catch (error) {
-          // 记录详细错误信息
-          console.error(`获取${apiKey}推荐失败:`, error)
-          // 无论何种错误，都使用模拟数据
-          useMockDataForApi(apiKey, apiConfig, true)
-        }
-      }
-
-      // 专用函数：使用指定API类型的模拟数据
-      function useMockDataForApi(apiKey, apiConfig, isError = false) {
-        // 确保模拟数据存在
-        if (mockData[apiKey] && mockData[apiKey].length > 0) {
-          // 复制模拟数据以避免直接引用
-          apiResults.value = JSON.parse(JSON.stringify(mockData[apiKey]))
-
-          // 根据情况显示不同的通知
-          if (isError) {
-            showNotification(`加载失败，使用${apiConfig?.name || apiKey}模拟数据`, 'warning')
-          } else {
-            showNotification(`暂无真实数据，使用${apiConfig?.name || apiKey}模拟数据`, 'info')
-          }
-        } else {
-          // 如果连模拟数据都没有，创建一个默认的模拟用户
-          const defaultMockUser = {
-            userId: Date.now(),
-            username: `模拟用户_${apiKey}`,
-            similarityRate: Math.floor(Math.random() * 30) + 70, // 70-99的随机相似度
-            isDefaultMock: true
-          }
-          apiResults.value = [defaultMockUser]
-          showNotification(`暂无数据，显示默认模拟用户`, 'info')
-        }
-      }
-
-      async function fetchAll() {
-        const id = userStore.userId || 1
-        if (!id) return
-
-        // 只触发几个常用推荐，store 已经有错误处理
-        try {
-          // 确保使用用户要求的5个推荐API
-          await Promise.all([
-            recommendStore.fetchCommonUp(id),
-            recommendStore.fetchSharedVideo(id),
-            recommendStore.fetchUserBehavior(id),
-            recommendStore.fetchCoComment(id),
-            recommendStore.fetchTheme(id)
-          ])
-
-          // 重置筛选结果
-          filteredResults.value = []
-          activeFilter.value = 'all'
-          showNotification('所有推荐数据加载完成', 'success')
-        } catch (err) {
-          console.error('获取推荐数据失败:', err)
-          showNotification('获取推荐失败，请稍后重试', 'error')
-        }
-      }
-
-    // 应用筛选
-    async function applyFilter() {
-      const id = userStore.userId || 1
-      if (!id) return
-
-      try {
-        let results = []
-
-        // 根据选择的筛选类型调用不同的API
-        switch (activeFilter.value) {
-          case 'commonUp':
-            results = await recommendApi.commonUp(id)
-            break
-          case 'sharedVideo':
-            results = await recommendApi.sharedVideo(id)
-            break
-          case 'userBehavior':
-            results = await recommendApi.userBehavior(id)
-            break
-          case 'coComment':
-            results = await recommendApi.coComment(id)
-            break
-          case 'theme':
-            results = await recommendApi.theme(id)
-            break
-          case 'sameUp':
-            if (!filterParams.value.upId) {
-              showNotification('请输入UP主ID', 'error')
-              return
-            }
-            results = await filterApi.sameUp({
-              upId: filterParams.value.upId,
-              durationOption: filterParams.value.durationOption
-            })
-            break
-          case 'sameTag':
-            if (!filterParams.value.tagId) {
-              showNotification('请输入标签ID', 'error')
-              return
-            }
-            results = await filterApi.sameTag({
-              tagId: filterParams.value.tagId,
-              durationOption: filterParams.value.durationOption
-            })
-            break
-          case 'sameTagVideoCount':
-            if (!filterParams.value.tagId) {
-              showNotification('请输入标签ID', 'error')
-              return
-            }
-            results = await filterApi.sameTagVideoCount({
-              tagId: filterParams.value.tagId,
-              ratioOption: filterParams.value.ratioOption
-            })
-            break
-          case 'deepVideo':
-            if (!filterParams.value.videoId) {
-              showNotification('请输入视频ID', 'error')
-              return
-            }
-            results = await filterApi.deepVideo({
-              videoId: filterParams.value.videoId,
-              option: filterParams.value.option
-            })
-            break
-          case 'sameUpVideoCount':
-            if (!filterParams.value.upId) {
-              showNotification('请输入UP主ID', 'error')
-              return
-            }
-            results = await filterApi.sameUpVideoCount({
-              upId: filterParams.value.upId,
-              userId: id
-            })
-            break
-          case 'all':
-          default:
-            filteredResults.value = []
-            return
-        }
-
-        // 处理返回结果
-        if (results && Array.isArray(results)) {
-          filteredResults.value = results.map(item => ({
-            ...item,
-            userId: item.userId || item.id,
-            username: item.username || `用户${item.userId || item.id}`
-          }))
-          showNotification(`筛选完成，找到 ${filteredResults.value.length} 个结果`, 'success')
-        } else {
-          filteredResults.value = []
-          showNotification('未找到符合条件的结果', 'info')
-        }
-      } catch (error) {
-        console.error('筛选失败:', error)
-        showNotification('筛选失败，请稍后重试', 'error')
-      }
-    }
-
-    // 发送好友申请
-    async function sendFriendRequest(userId, username) {
-      try {
-        // 设置请求状态
-        requestStatus.value[userId] = 'sending'
-
-        await friendApi.sendFriendRequest(userId)
-
-        // 更新状态为已发送
-        requestStatus.value[userId] = 'sent'
-
-        showNotification(`已向 ${username} 发送好友请求`, 'success')
-
-        // 3秒后恢复按钮状态
-        setTimeout(() => {
-          delete requestStatus.value[userId]
-        }, 3000)
-
-      } catch (error) {
-        console.error('发送好友请求失败:', error)
-        requestStatus.value[userId] = 'failed'
-        showNotification('发送好友请求失败，请稍后重试', 'error')
-
-        // 2秒后恢复按钮状态
-        setTimeout(() => {
-          delete requestStatus.value[userId]
-        }, 2000)
-      }
-    }
-
-    // 显示通知
-    function showNotification(message, type = 'info') {
-      notification.value = {
-        message,
-        type
-      }
-
-      // 3秒后自动清除
-      setTimeout(() => {
-        notification.value = null
-      }, 3000)
-    }
-
-    // 清除通知
-    function clearNotification() {
-      notification.value = null
-    }
-
-    // 检查是否正在请求中
-    function isRequesting(userId) {
-      const status = requestStatus.value[userId]
-      return status === 'sending' || status === 'sent'
-    }
-
-    // 获取请求状态文本
-    function getRequestStatus(userId) {
-      const status = requestStatus.value[userId]
-      switch (status) {
-        case 'sending':
-          return '发送中...'
-        case 'sent':
-          return '已发送'
-        case 'failed':
-          return '发送失败'
-        default:
-          return '添加好友'
-      }
-    }
-
-    // 检查是否所有列表都为空
-    const isAllEmpty = computed(() => {
-      return coComment.value.length === 0 &&
-             reply.value.length === 0 &&
-             sharedVideo.value.length === 0 &&
-             otherLists.value.length === 0
-    })
-
-    onMounted(() => {
-      fetchAll()
-    })
-
-    const coComment = computed(() => recommendStore.coComment || [])
-    const reply = computed(() => recommendStore.reply || [])
-    const sharedVideo = computed(() => recommendStore.sharedVideo || [])
-    const otherLists = computed(() => {
-      return [
-        ...(recommendStore.category || []),
-        ...(recommendStore.theme || []),
-        ...(recommendStore.userBehavior || []),
-        ...(recommendStore.commonUp || []),
-        ...(recommendStore.favoriteSimilarity || []),
-        ...(recommendStore.commentFriends || [])
-      ]
-    })
-
-    // 筛选结果是否显示
-    const showFilteredResults = computed(() => {
-      return activeFilter.value !== 'all' && filteredResults.value.length > 0
-    })
-
-    // 获取当前筛选类型的标题
-    const filterTitle = computed(() => {
-      const titles = {
-        commonUp: '共同关注UP主推荐',
-        sharedVideo: '共享视频推荐',
-        userBehavior: '用户行为相似度推荐',
-        coComment: '同视频评论推荐',
-        theme: '内容类型重合度推荐',
-        sameUp: '同一UP主筛选结果',
-        sameTag: '同一标签筛选结果',
-        sameUpVideoCount: 'UP主视频观看比例筛选结果',
-        sameTagVideoCount: '标签视频观看比例筛选结果',
-        deepVideo: '深度视频筛选结果'
-      }
-      return titles[activeFilter.value] || '筛选结果'
-    })
-
-    return {
-      fetchAll,
-      applyFilter,
-      coComment,
-      reply,
-      sharedVideo,
-      otherLists,
-      avatar,
-      loading,
-      sendFriendRequest,
-      isRequesting,
-      getRequestStatus,
-      notification,
-      clearNotification,
-      isAllEmpty,
-      activeFilter,
-      filterParams,
-      filteredResults,
-      showFilteredResults,
-      filterTitle
+// 本地状态管理
+// const recommendStore = useRecommendStore()
+// const userStore = useUserStore()
+// 从localStorage获取当前用户ID
+const getCurrentUserId = () => {
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    try {
+      const userInfo = JSON.parse(userStr)
+      return userInfo.userId || localStorage.getItem('userId')
+    } catch (e) {
+      console.error('解析用户信息失败:', e)
     }
   }
+  return localStorage.getItem('userId') || 123 // 默认值作为后备
 }
+
+// 响应式数据
+const selectedApis = ref([])
+const loading = ref(false)
+const message = ref('')
+const messageType = ref('info')
+const tooltipVisible = ref(false)
+const tooltipUser = ref(null)
+const tooltipStyle = ref({})
+
+// 默认头像
+const defaultAvatar = '/avatar-placeholder.png'
+
+// API配置
+const recommendApis = [
+  { key: 'coComment', name: '同视频评论推荐', endpoint: '/api/recommend/co-comment/' },
+  { key: 'reply', name: '回复互动推荐', endpoint: '/api/recommend/reply/' },
+  { key: 'sharedVideo', name: '视频观看相似推荐', endpoint: '/api/recommend/shared-video/' },
+  { key: 'category', name: '分区重合推荐', endpoint: '/api/recommend/category/' },
+  { key: 'theme', name: '内容类型重合推荐', endpoint: '/api/recommend/theme/' },
+  { key: 'userBehavior', name: '用户行为相似推荐', endpoint: '/api/recommend/user-behavior/' },
+  { key: 'commonUp', name: '共同关注UP主推荐', endpoint: '/api/recommend/common-up/' },
+  { key: 'favoriteSimilarity', name: '收藏夹相似推荐', endpoint: '/api/recommend/favorite-similarity/' },
+  { key: 'commentFriends', name: '评论内容相似推荐', endpoint: '/api/recommend/comment-friends/' }
+]
+
+// 存储所有API的结果
+const apiResults = ref({})
+
+// 计算过滤后的结果（用户ID交集）
+const filteredResults = computed(() => {
+  if (selectedApis.value.length === 0) return []
+
+  // 获取所有选中API的用户ID集合
+  const userIdSets = selectedApis.value.map(apiKey => {
+    const results = apiResults.value[apiKey] || []
+    return new Set(results.map(user => user.userId))
+  })
+
+  // 计算用户ID的交集
+  const intersection = userIdSets.reduce((a, b) => {
+    return new Set([...a].filter(x => b.has(x)))
+  })
+
+  // 合并交集中用户的所有信息
+  const mergedUsers = []
+  intersection.forEach(userId => {
+    // 创建一个合并的用户对象
+    const mergedUser = { userId }
+
+    // 从各个API结果中收集信息
+    selectedApis.value.forEach(apiKey => {
+      const userData = (apiResults.value[apiKey] || []).find(u => u.userId === userId)
+      if (userData) {
+        // 合并用户数据，但优先保留非空值
+        Object.keys(userData).forEach(key => {
+          if (userData[key] !== undefined && userData[key] !== null) {
+            mergedUser[key] = userData[key]
+          }
+        })
+
+        // 记录这个用户来自哪个API
+        if (!mergedUser.sourceApis) mergedUser.sourceApis = []
+        mergedUser.sourceApis.push(apiKey)
+      }
+    })
+
+    mergedUsers.push(mergedUser)
+  })
+
+  // 按最高相似度排序
+  return mergedUsers.sort((a, b) => getHighestSimilarity(b) - getHighestSimilarity(a))
+})
+
+// 切换API选择
+function toggleApiSelection(apiKey) {
+  const index = selectedApis.value.indexOf(apiKey)
+  if (index > -1) {
+    selectedApis.value.splice(index, 1)
+  } else {
+    selectedApis.value.push(apiKey)
+  }
+}
+
+// 获取推荐数据
+async function fetchRecommendations() {
+  if (selectedApis.value.length === 0) {
+    showMessage('请至少选择一个推荐来源', 'warning')
+    return
+  }
+
+  loading.value = true
+  message.value = ''
+
+  // 获取当前用户ID
+  const currentUserId = getCurrentUserId()
+  if (!currentUserId) {
+    showMessage('无法获取用户ID，请先登录', 'error')
+    loading.value = false
+    return
+  }
+
+  try {
+    // 创建API请求数组
+    const fetchPromises = selectedApis.value.map(async apiKey => {
+      try {
+        // 使用recommendApi调用实际的API
+        const response = await recommendApi[apiKey](currentUserId)
+        // 确保返回的数据是数组格式
+        const results = Array.isArray(response) ? response : (response.results || response.data || [])
+        apiResults.value[apiKey] = results
+      } catch (err) {
+        console.error(`获取${apiKey}推荐数据失败:`, err)
+        // 出错时使用空数组，确保后续流程可以继续
+        apiResults.value[apiKey] = []
+      }
+    })
+
+    // 等待所有请求完成
+    await Promise.all(fetchPromises)
+
+    // 检查是否有有效的推荐结果
+    let hasResults = false
+    selectedApis.value.forEach(apiKey => {
+      if (apiResults.value[apiKey] && apiResults.value[apiKey].length > 0) {
+        hasResults = true
+      }
+    })
+
+    if (!hasResults) {
+      showMessage('没有找到推荐用户，请尝试选择其他推荐来源', 'info')
+    } else if (filteredResults.value.length === 0) {
+      showMessage('没有找到共同匹配的用户，各推荐来源之间无交集', 'info')
+    } else {
+      showMessage(`成功找到 ${filteredResults.value.length} 个匹配用户`, 'success')
+    }
+  } catch (error) {
+    console.error('获取推荐失败:', error)
+    showMessage('获取推荐失败，请稍后重试', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 显示提示信息
+function showMessage(text, type = 'info') {
+  message.value = text
+  messageType.value = type
+  setTimeout(() => {
+    message.value = ''
+  }, 3000)
+}
+
+// 显示悬停提示
+function showTooltip(user, event) {
+  tooltipUser.value = user
+  tooltipVisible.value = true
+
+  // 计算提示框位置
+  const rect = event.target.getBoundingClientRect()
+  tooltipStyle.value = {
+    left: `${rect.right + 10}px`,
+    top: `${rect.top}px`
+  }
+}
+
+// 隐藏悬停提示
+function hideTooltip() {
+  tooltipVisible.value = false
+  tooltipUser.value = null
+}
+
+// 获取用户的详细信息（排除基本字段）
+function getDetailedInfo(user) {
+  if (!user) return {}
+
+  const detailedInfo = {}
+  Object.keys(user).forEach(key => {
+    // 排除基本字段和sourceApis
+    if (!['userId', 'username', 'avatarPath', 'sourceApis'].includes(key)) {
+      detailedInfo[key] = user[key]
+    }
+  })
+
+  return detailedInfo
+}
+
+// 格式化键名显示
+function formatKey(key) {
+  return key.replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
+    .replace(/Similarity Score|Score|Count$/, match => {
+      switch (match) {
+        case 'Similarity Score': return '相似度'
+        case 'Score': return '分数'
+        case 'Count': return '数量'
+        default: return match
+      }
+    })
+}
+
+// 格式化值显示
+function formatValue(value, key) {
+  // 相似度值转换为百分比
+  if (key.toLowerCase().includes('similarity') && typeof value === 'number' && value <= 1) {
+    return `${(value * 100).toFixed(1)}%`
+  }
+  return value
+}
+
+// 获取用户的最高相似度
+function getHighestSimilarity(user) {
+  if (!user) return 0
+
+  let maxSimilarity = 0
+  Object.keys(user).forEach(key => {
+    if (key.toLowerCase().includes('similarity') &&
+        typeof user[key] === 'number' &&
+        user[key] > maxSimilarity) {
+      maxSimilarity = user[key]
+    }
+  })
+
+  return (maxSimilarity * 100).toFixed(1)
+}
+
+// 生成模拟头像路径
+function generateAvatarPath(userId) {
+  // 这里使用随机头像服务，实际项目中应该使用真实的头像服务
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`
+}
+
+// 生成模拟数据
+function generateMockData(apiKey) {
+  const mockUsers = []
+  const baseCount = Math.floor(Math.random() * 5) + 5
+
+  for (let i = 1; i <= baseCount; i++) {
+    const userId = 1000 + i + (apiKey.charCodeAt(0) * 100)
+    const similarity = 0.5 + Math.random() * 0.5 // 0.5-1.0的相似度
+
+    const user = {
+      userId,
+      username: `${getApiTypeName(apiKey)}用户${i}`,
+      avatarPath: generateAvatarPath(userId)
+    }
+
+    // 根据API类型添加特定字段
+    switch (apiKey) {
+      case 'coComment':
+        user.commonVideoCount = Math.floor(Math.random() * 20) + 1
+        user.similarityScore = similarity
+        break
+      case 'reply':
+        user.replyCount = Math.floor(Math.random() * 50) + 5
+        user.similarityScore = similarity
+        break
+      case 'sharedVideo':
+        user.sharedVideoCount = Math.floor(Math.random() * 100) + 10
+        user.similarityScore = similarity
+        break
+      case 'category':
+        user.commonCategoryCount = Math.floor(Math.random() * 15) + 3
+        user.similarityScore = similarity
+        break
+      case 'theme':
+        user.commonThemeCount = Math.floor(Math.random() * 25) + 5
+        user.similarityScore = similarity
+        break
+      case 'userBehavior':
+        user.behaviorSimilarity = similarity
+        user.activeTimeSimilarity = 0.6 + Math.random() * 0.4
+        break
+      case 'commonUp':
+        user.commonUpCount = Math.floor(Math.random() * 30) + 5
+        user.similarityScore = similarity
+        break
+      case 'favoriteSimilarity':
+        user.commonFavoriteCount = Math.floor(Math.random() * 50) + 10
+        user.similarityScore = similarity
+        break
+      case 'commentFriends':
+        user.commentSimilarity = similarity
+        user.commonTopicCount = Math.floor(Math.random() * 15) + 3
+        break
+    }
+
+    mockUsers.push(user)
+  }
+
+  return mockUsers
+}
+
+// 获取API类型的中文名
+function getApiTypeName(apiKey) {
+  const api = recommendApis.find(a => a.key === apiKey)
+  return api ? api.name : apiKey
+}
+
+// 组件挂载时的初始化
+onMounted(() => {
+  // 初始化时可以自动选择一些API
+  // selectedApis.value = ['commonUp', 'sharedVideo']
+})
 </script>
 
 <style scoped>
-.recommendations-page {
-  padding: 20px;
+.recommendations-container {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
+  position: relative;
 }
 
-.controls {
-  margin-bottom: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-.filter-section {
-  flex: 1;
-  min-width: 300px;
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.filter-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
+.page-title {
+  font-size: 2.5rem;
   color: #333;
-  font-size: 16px;
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 600;
 }
 
-.filter-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+.api-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 25px;
 }
 
-.filter-controls select,
-.filter-controls input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.api-button {
+  padding: 12px 20px;
+  background-color: #f0f0f0;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
   font-size: 14px;
+  transition: all 0.3s ease;
+  text-align: left;
 }
 
-.filter-params {
+.api-button:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.api-button.active {
+  background-color: #ff69b4;
+  color: white;
+  border-color: #ff1493;
+}
+
+.action-section {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
   flex-wrap: wrap;
-  margin-top: 10px;
-  padding: 10px;
-  background: white;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
 }
 
-.filter-params input,
-.filter-params select {
-  min-width: 120px;
-}
-
-.controls button {
-  padding: 10px 20px;
-  background-color: #007bff;
+.fetch-button {
+  padding: 14px 30px;
+  background-color: #ff69b4;
   color: white;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
-}
-
-.controls button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.controls button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-/* 通知样式 */
-.notification {
-  padding: 12px 20px;
-  margin-bottom: 20px;
-  border-radius: 5px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  animation: slideDown 0.3s ease-out;
-}
-
-.notification.success {
-  background-color: #d4edda;
-  color: #155724;
-  border-left: 4px solid #28a745;
-}
-
-.notification.error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-left: 4px solid #dc3545;
-}
-
-.notification.info {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border-left: 4px solid #17a2b8;
-}
-
-.notification .close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  margin-left: 10px;
-  color: inherit;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 推荐部分样式 */
-.sections section {
-  margin-bottom: 30px;
-  padding: 20px;
-  background-color: #f8f9fa;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.sections h3 {
-  margin-top: 0;
-  margin-bottom: 16px;
+.fetch-button:hover:not(:disabled) {
+  background-color: #ff1493;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+.fetch-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.selected-count {
+  font-size: 14px;
+  color: #666;
+}
+
+.results-section {
+  margin-top: 40px;
+}
+
+.results-title {
+  font-size: 1.8rem;
   color: #333;
-  font-size: 18px;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 8px;
+  margin-bottom: 25px;
+  font-weight: 500;
 }
 
-/* 用户卡片网格 */
-.recommend-grid {
+.user-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
 }
 
 .user-card {
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .user-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #ff69b4;
 }
 
-.avatar {
-  width: 48px;
-  height: 48px;
+.user-avatar {
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 15px;
+  border: 3px solid #ff69b4;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
 .user-info {
-  flex: 1;
+  text-align: center;
 }
 
 .username {
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 4px;
   color: #333;
+  margin-bottom: 8px;
 }
 
-.info {
+.similarity-rate {
   font-size: 14px;
-  color: #666;
-  line-height: 1.4;
+  color: #ff69b4;
+  font-weight: 500;
 }
 
-.add-friend-btn {
-  padding: 8px 16px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.add-friend-btn:hover:not(:disabled) {
-  background-color: #218838;
-}
-
-.add-friend-btn:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-/* 空状态 */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #6c757d;
-}
-
-.empty-state p {
-  margin-bottom: 20px;
-  font-size: 18px;
-}
-
-.empty-state button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+  color: #666;
   font-size: 16px;
 }
 
-.empty-state button:hover {
-  background-color: #0056b3;
+.message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 25px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
 }
 
-/* 响应式调整 */
+.message.success {
+  background-color: #4caf50;
+}
+
+.message.error {
+  background-color: #f44336;
+}
+
+.message.warning {
+  background-color: #ff9800;
+}
+
+.message.info {
+  background-color: #2196f3;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  z-index: 1001;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip-header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tooltip-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tooltip-content {
+  font-size: 14px;
+}
+
+.tooltip-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+.tooltip-item:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-label {
+  color: #ccc;
+  font-weight: 500;
+}
+
+.tooltip-value {
+  color: #ff69b4;
+  font-weight: 600;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .recommend-grid {
+  .api-buttons {
     grid-template-columns: 1fr;
   }
 
-  .user-card {
-    flex-direction: column;
-    text-align: center;
+  .user-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 
-  .add-friend-btn {
-    width: 100%;
+  .page-title {
+    font-size: 2rem;
   }
 
-  /* API推荐按钮组样式 */
-  .recommend-api-buttons {
-    margin-bottom: 20px;
+  .results-title {
+    font-size: 1.5rem;
   }
 
-  .api-buttons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
-
-  .api-btn {
-    padding: 8px 16px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .api-btn:hover:not(:disabled) {
-    background-color: #f0f0f0;
-    border-color: #999;
-  }
-
-  .api-btn.active {
-    background-color: #1890ff;
-    color: white;
-    border-color: #1890ff;
-  }
-
-  .api-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  /* API结果展示区域样式 */
-  .api-results-section {
-    margin-top: 30px;
-    padding: 20px;
-    background-color: #fafafa;
-    border-radius: 8px;
-  }
-
-  .api-results-section h3 {
-    margin-top: 0;
-    color: #333;
-    font-size: 18px;
-    margin-bottom: 15px;
-  }
-
-  .user-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 15px;
-  }
-
-  .user-card {
-    background-color: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-
-  .user-info {
-    flex: 1;
-  }
-
-  .user-stats {
-    margin-top: 8px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .stat-item {
-    display: inline-block;
-  }
-
-  .similarity-rate {
-    color: #52c41a;
-    font-weight: 500;
-  }
-
-  .loading-placeholder, .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: #999;
-    font-size: 16px;
-  }
-
-  .add-friend-btn {
-    padding: 6px 12px;
-    background-color: #1890ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-
-  .add-friend-btn:hover:not(:disabled) {
-    background-color: #40a9ff;
-  }
-
-  .add-friend-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+  .tooltip {
+    max-width: 250px;
+    font-size: 13px;
   }
 }
 </style>

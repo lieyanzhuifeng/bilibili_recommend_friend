@@ -196,14 +196,14 @@ export const messageApi = {
 }
 
 export const recommendApi = {
-  // 主要推荐API（按照用户要求的5个）
+  // 主要推荐API（按照API文档格式）
   commonUp: (userId) => get(`/api/recommend/common-up/${userId}`),
   sharedVideo: (userId) => get(`/api/recommend/shared-video/${userId}`),
   userBehavior: (userId) => get(`/api/recommend/user-behavior/${userId}`),
   coComment: (userId) => get(`/api/recommend/co-comment/${userId}`),
   theme: (userId) => get(`/api/recommend/theme/${userId}`),
 
-  // 其他推荐API
+  // 其他推荐API（与文档保持一致）
   reply: (userId) => get(`/api/recommend/reply/${userId}`),
   category: (userId) => get(`/api/recommend/category/${userId}`),
   favoriteSimilarity: (userId) => get(`/api/recommend/favorite-similarity/${userId}`),
