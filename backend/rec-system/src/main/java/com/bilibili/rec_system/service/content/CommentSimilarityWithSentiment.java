@@ -46,19 +46,25 @@ public enum CommentSimilarityWithSentiment {
     /**
      * 初始化方法，加载模型
      */
-    public void init() throws Exception {
+    public void init() {
         if (!initialized) {
             synchronized (initLock) {
                 if (!initialized) {
                     System.out.println("正在初始化 CommentSimilarityWithSentiment 模型...");
                     long startTime = System.currentTimeMillis();
 
-                    bertSim.initialize();
-                    sentiment.initialize();
-
-                    initialized = true;
-                    long endTime = System.currentTimeMillis();
-                    System.out.printf("CommentSimilarityWithSentiment 初始化完成，耗时: %dms\n", (endTime - startTime));
+                    try {
+                        bertSim.initialize();
+                        sentiment.initialize();
+                        initialized = true;
+                        long endTime = System.currentTimeMillis();
+                        System.out.printf("CommentSimilarityWithSentiment 初始化完成，耗时: %dms\n", (endTime - startTime));
+                    } catch (Exception e) {
+                        System.err.println("CommentSimilarityWithSentiment 模型初始化失败: " + e.getMessage());
+                        e.printStackTrace();
+                        // 模型加载失败不抛出异常，允许服务继续运行
+                        initialized = false;
+                    }
                 }
             }
         }
@@ -67,10 +73,12 @@ public enum CommentSimilarityWithSentiment {
     /**
      * 确保已初始化的方法
      */
-    private void ensureInitialized() {
+    private boolean ensureInitialized() {
         if (!initialized) {
-            throw new IllegalStateException("CommentSimilarityWithSentiment 未初始化，请先调用 init() 方法");
+            System.err.println("CommentSimilarityWithSentiment 未初始化，部分功能可能不可用");
+            return false;
         }
+        return true;
     }
 
     /**
@@ -106,7 +114,9 @@ public enum CommentSimilarityWithSentiment {
      * ⭐ 优化版综合相似度：句向量相似度低时直接返回0，跳过情感分析
      */
     public double similarity(String s1, String s2) throws TranslateException {
-        ensureInitialized();
+        if (!ensureInitialized()) {
+            return 0.0; // 未初始化时返回默认相似度0
+        }
 
         // 1. 先计算句向量相似度
         double baseSim = bertSim.calculateSimilarity(s1, s2);
@@ -150,7 +160,14 @@ public enum CommentSimilarityWithSentiment {
      * ⭐ 优化版批量匹配分
      */
     public List<Double> batchMatchScore(String comment, List<String> commentList) throws Exception {
-        ensureInitialized();
+        if (!ensureInitialized()) {
+            // 未初始化时返回全0的相似度列表
+            List<Double> defaultScores = new ArrayList<>(commentList.size());
+            for (int i = 0; i < commentList.size(); i++) {
+                defaultScores.add(0.0);
+            }
+            return defaultScores;
+        }
 
         // 预计算用户评论的情感（因为可能用到）
         ChineseSentimentClassifier.SentimentResult userSentiment = getCachedSentiment(comment);
@@ -203,12 +220,12 @@ public enum CommentSimilarityWithSentiment {
     /**
      * 重新初始化方法
      */
-    public void reinit() throws Exception {
+    public void reinit() {
         synchronized (initLock) {
             if (initialized) {
                 close();
             }
-            init();
+            init(); // init() 现在不抛出异常
         }
     }
 
@@ -238,9 +255,11 @@ public enum CommentSimilarityWithSentiment {
         return EARLY_TERMINATION_THRESHOLD;
     }
 
-    /** ===== 测试入口 ===== */
+    /**
+     * ===== 测试入口 =====
+     */
     public static void main(String[] args) throws Exception {
-        CommentSimilarityWithSentiment.INSTANCE.init();
+        CommentSimilarityWithSentiment.INSTANCE.init(); // 现在不抛出异常
 
         String userComment = "说实话，这场比赛詹姆斯的发挥就是老将教科书级别的存在。他在关键时刻的几次选择非常成熟，不管是用身体吃对抗杀进内线，还是吸引包夹后精准分球，都体现了他对比赛的掌控。虽然现在运动能力不像巅峰，但他靠经验、判断和节奏完全弥补了这一点。能在这个年龄依旧影响比赛走势，这就是为什么我认为詹姆斯是史上最全面球员之一。";
 

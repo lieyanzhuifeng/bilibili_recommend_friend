@@ -22,15 +22,28 @@ public class ChineseBertSimilarity {
      * 初始化BERT模型 - 使用本地模型文件
      */
     public void initialize() throws ModelNotFoundException, MalformedModelException, IOException {
-        // 直接使用模型目录名（在项目根目录）
-        File modelDir = new File("paraphrase-multilingual-MiniLM-L12-v2");
+        // 尝试多个可能的模型目录位置
+        String modelName = "paraphrase-multilingual-MiniLM-L12-v2";
+        
+        // 尝试1: 当前工作目录（项目根目录）
+        File modelDir = new File(modelName);
+        
+        // 尝试2: 如果当前目录不存在，尝试rec-system目录下
+        if (!modelDir.exists()) {
+            modelDir = new File("rec-system/" + modelName);
+        }
+        
+        // 尝试3: 如果rec-system目录也不存在，尝试当前目录下的rec-system子目录
+        if (!modelDir.exists()) {
+            modelDir = new File("./rec-system/" + modelName);
+        }
+        
         String absolutePath = modelDir.getAbsolutePath();
-
         System.out.println("模型路径: " + absolutePath);
 
         if (!modelDir.exists()) {
             throw new IOException("模型目录不存在: " + absolutePath +
-                    "\n请确保 'paraphrase-multilingual-MiniLM-L12-v2' 目录在项目根目录下");
+                    "\n请确保 'paraphrase-multilingual-MiniLM-L12-v2' 目录在项目根目录或rec-system目录下");
         }
 
         Criteria<String, float[]> criteria = Criteria.builder()
