@@ -37,4 +37,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u.userId, u.username FROM User u WHERE u.userId IN :upIds")
     List<Object[]> findUpNamesByIds(@Param("upIds") List<Long> upIds);
+
+    /**
+     * 根据用户名模糊搜索（不区分大小写）
+     */
+    List<User> findByUsernameContaining(@Param("username") String username);
 }

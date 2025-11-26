@@ -13,7 +13,6 @@ import java.util.Map;
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
 
-
     //根据视频ID获取视频时长
     @Query("SELECT v.duration FROM Video v WHERE v.videoId = :videoId")
     LocalTime findDurationByVideoId(@Param("videoId") Long videoId);
@@ -34,5 +33,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT COUNT(v) FROM Video v WHERE v.uploaderId = :upId")
     Long countVideosByUpId(@Param("upId") Long upId);
 
-
+    /**
+     * 根据标题模糊搜索视频（不区分大小写）
+     */
+    List<Video> findByTitleContaining(@Param("title") String title);
 }

@@ -28,7 +28,7 @@ public enum CommentSimilarityWithSentiment {
     private static final int MAX_CACHE_SIZE = 10000; // 增大缓存容量
 
     // 优化参数
-    private static final double EARLY_TERMINATION_THRESHOLD = 0.5; // 提前终止阈值
+    private static final double EARLY_TERMINATION_THRESHOLD = 0.6; // 提前终止阈值
     private static final double PENALTY_WEIGHT = 0.2; // 情感惩罚权重
 
     CommentSimilarityWithSentiment() {
