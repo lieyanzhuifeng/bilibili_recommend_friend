@@ -481,52 +481,41 @@
 和paraphrase-multilingual-MiniLM-L12-v2文件夹
 将这两个模型文件夹放在**rec-system**文件夹下，**在使用平台打开项目时，必需选择打开rec-system文件夹，否则无法运行**
 
-## 11.根据ID获取用户信息
 
-**基础路径**: `/api/users`  
-**协议**: HTTP/HTTPS  
-**数据格式**: JSON  
-**认证方式**: 无需认证（可根据需要添加）
+
+## 其他api
+- **基础路径**：`/api/users`
+- **控制器**：`UserController`
+- **说明**：提供用户信息查询、用户/视频/标签的模糊搜索功能。
 
 ---
 
-## API 接口详情
+### 1. 根据用户ID获取用户信息
 
-### 1. 通过用户ID获取用户信息
+**端点**：`GET /{userId}`
 
-**端点**: `GET /api/users/{userId}`
+**描述**：根据用户ID获取指定用户的详细信息。
 
-#### 请求参数
+**路径参数**：
+| 参数名 | 类型 | 必需 | 说明 |
+|--------|------|------|------|
+| userId | Long | 是   | 用户ID |
 
-| 参数名 | 类型 | 位置 | 必需 | 描述 |
-|--------|------|------|------|------|
-| userId | Long | Path | 是 | 用户唯一标识ID |
-
-#### 请求示例
-
-```http
-GET http://localhost:8080/api/users/123
-Accept: application/json
-Content-Type: application/json
-```
-
-#### 响应格式
-
-**成功响应 (HTTP 200)**
+**响应示例**：
 ```json
 {
   "success": true,
+  "message": "获取用户信息成功",
   "data": {
-    "userId": 123,
-    "username": "john_doe",
-    "registerTime": "2023-01-15T10:30:00",
-    "avatarPath": "/avatars/john_doe.jpg"
-  },
-  "message": "获取用户信息成功"
+    "userId": 1,
+    "username": "张三",
+    "registerTime": "2023-10-01T12:00:00",
+    "avatarPath": "/avatars/1.jpg"
+  }
 }
 ```
 
-**用户不存在 (HTTP 404)**
+**错误响应**：
 ```json
 {
   "success": false,
@@ -534,30 +523,110 @@ Content-Type: application/json
 }
 ```
 
-**服务器错误 (HTTP 500)**
+---
+
+### 2. 根据用户名模糊搜索用户
+
+**端点**：`GET /search`
+
+**描述**：根据用户名关键词模糊匹配用户列表。
+
+**查询参数**：
+| 参数名 | 类型 | 必需 | 说明 |
+|--------|------|------|------|
+| keyword | String | 是 | 搜索关键词 |
+
+**响应示例**：
 ```json
 {
-  "success": false,
-  "message": "服务器内部错误: [具体错误信息]"
+  "success": true,
+  "message": "搜索完成，找到 2 个用户",
+  "keyword": "张",
+  "total": 2,
+  "data": [
+    {
+      "userId": 1,
+      "username": "张三",
+      "registerTime": "2023-10-01T12:00:00",
+      "avatarPath": "/avatars/1.jpg"
+    },
+    {
+      "userId": 2,
+      "username": "张四",
+      "registerTime": "2023-10-02T12:00:00",
+      "avatarPath": "/avatars/2.jpg"
+    }
+  ]
 }
 ```
 
-#### 响应字段说明
+---
 
-**根对象字段**:
-| 字段名 | 类型 | 描述 |
-|--------|------|------|
-| success | Boolean | 请求是否成功 |
-| data | Object | 用户数据对象（成功时返回） |
-| message | String | 响应消息 |
+### 3. 根据视频标题模糊搜索视频
 
-#### 状态码说明
+**端点**：`GET /videos/search`
 
-| HTTP状态码 | 说明 |
-|------------|------|
-| 200 | 请求成功，返回用户信息 |
-| 404 | 用户不存在 |
-| 500 | 服务器内部错误 |
+**描述**：根据视频标题关键词模糊匹配视频列表。
+
+**查询参数**：
+| 参数名 | 类型 | 必需 | 说明 |
+|--------|------|------|------|
+| keyword | String | 是 | 搜索关键词 |
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "message": "搜索完成，找到 1 个视频",
+  "keyword": "教程",
+  "total": 1,
+  "data": [
+    {
+      "videoId": 101,
+      "uploaderId": 1,
+      "title": "Spring Boot 教程",
+      "categoryId": 2,
+      "themeId": 5,
+      "publishTime": "2024-01-15T10:00:00",
+      "duration": "00:15:30"
+    }
+  ]
+}
+```
+
+---
+
+### 4. 根据标签名称模糊搜索标签
+
+**端点**：`GET /tags/search`
+
+**描述**：根据标签名称关键词模糊匹配标签列表。
+
+**查询参数**：
+| 参数名 | 类型 | 必需 | 说明 |
+|--------|------|------|------|
+| keyword | String | 是 | 搜索关键词 |
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "message": "搜索完成，找到 3 个标签",
+  "keyword": "科技",
+  "total": 3,
+  "data": [
+    {
+      "tagId": 10,
+      "tagName": "科技前沿"
+    },
+    {
+      "tagId": 11,
+      "tagName": "科技资讯"
+    }
+  ]
+}
+```
+
 
 
 

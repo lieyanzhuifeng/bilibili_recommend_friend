@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TagRepository extends JpaRepository<Tag, Long> {
 
@@ -25,4 +27,9 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
      */
     @Query("SELECT CASE WHEN t.tagName LIKE '%系列' THEN true ELSE false END FROM Tag t WHERE t.tagId = :tagId")
     Boolean isSeriesTag(@Param("tagId") Long tagId);
+
+    /**
+     * 根据标签名称模糊搜索标签列表
+     */
+    List<Tag> findByTagNameContaining(String tagName);
 }
