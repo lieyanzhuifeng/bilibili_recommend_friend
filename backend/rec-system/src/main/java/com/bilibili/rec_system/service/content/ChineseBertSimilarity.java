@@ -22,29 +22,30 @@ public class ChineseBertSimilarity {
      * 初始化BERT模型 - 使用本地模型文件
      */
     public void initialize() throws ModelNotFoundException, MalformedModelException, IOException {
-        // 尝试多个可能的模型目录位置
+        // 直接使用当前目录下的模型
         String modelName = "paraphrase-multilingual-MiniLM-L12-v2";
-        
-        // 尝试1: 当前工作目录（项目根目录）
         File modelDir = new File(modelName);
-        
-        // 尝试2: 如果当前目录不存在，尝试rec-system目录下
-        if (!modelDir.exists()) {
-            modelDir = new File("rec-system/" + modelName);
-        }
-        
-        // 尝试3: 如果rec-system目录也不存在，尝试当前目录下的rec-system子目录
-        if (!modelDir.exists()) {
-            modelDir = new File("./rec-system/" + modelName);
-        }
-        
-        String absolutePath = modelDir.getAbsolutePath();
-        System.out.println("模型路径: " + absolutePath);
 
-        if (!modelDir.exists()) {
-            throw new IOException("模型目录不存在: " + absolutePath +
-                    "\n请确保 'paraphrase-multilingual-MiniLM-L12-v2' 目录在项目根目录或rec-system目录下");
+        System.out.println("尝试加载相似度模型路径: " + modelName);
+
+        // 列出目录内容帮助调试
+        System.out.println("模型目录存在，内容:");
+        File[] files = modelDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                System.out.println("- " + file.getName() + " (" + file.length() + " bytes)");
+            }
         }
+
+        // 检查pt文件是否存在
+        File ptFile = new File(modelDir, modelName + ".pt");
+        if (!ptFile.exists()) {
+            System.err.println("错误：模型文件不存在: " + ptFile.getAbsolutePath());
+            throw new IOException("无法找到模型PT文件");
+        }
+
+        String absolutePath = modelDir.getAbsolutePath();
+        System.out.println("相似度模型路径: " + absolutePath);
 
         Criteria<String, float[]> criteria = Criteria.builder()
                 .setTypes(String.class, float[].class)
@@ -54,9 +55,14 @@ public class ChineseBertSimilarity {
                 .optProgress(new ProgressBar())
                 .build();
 
-        model = criteria.loadModel();
-        predictor = model.newPredictor();
-        System.out.println("✅ 相似度模型加载成功！");
+        try {
+            model = criteria.loadModel();
+            predictor = model.newPredictor();
+            System.out.println("✅ 相似度模型加载成功！");
+        } catch (Exception e) {
+            System.err.println("加载模型时出错: " + e.getMessage());
+            throw new IOException("无法加载模型: " + e.getMessage(), e);
+        }
     }
 
     /**

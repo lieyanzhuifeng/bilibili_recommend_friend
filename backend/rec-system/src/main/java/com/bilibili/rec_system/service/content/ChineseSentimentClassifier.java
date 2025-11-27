@@ -41,9 +41,57 @@ public class ChineseSentimentClassifier {
 
     /** 初始化模型 */
     public void initialize() throws ModelNotFoundException, MalformedModelException, IOException {
-        File modelDir = new File("bert-base-multilingual-uncased-sentiment");
+        // 直接使用当前目录下的模型
+        String modelName = "bert-base-multilingual-uncased-sentiment";
+        String modelPath = modelName;
+
+        System.out.println("尝试加载情感分析模型路径: " + modelPath);
+
+        File modelDir = new File(modelPath);
+
+        // 列出目录内容帮助调试
+        System.out.println("当前工作目录: " + System.getProperty("user.dir"));
+        if (modelDir.exists()) {
+            System.out.println("模型目录存在，内容:");
+            File[] files = modelDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    System.out.println("- " + file.getName() + " (" + file.length() + " bytes)");
+                }
+            }
+        } else {
+            System.out.println("模型目录不存在，尝试其他路径...");
+            // 尝试其他路径
+            String[] pathCombinations = {
+                    "",
+                    "rec-system",
+                    "./rec-system",
+                    "backend/rec-system",
+                    "./backend/rec-system"
+            };
+
+            for (String path : pathCombinations) {
+                String fullPath;
+                if (path.isEmpty()) {
+                    fullPath = modelName;
+                } else {
+                    fullPath = path + "/" + modelName;
+                }
+
+                modelDir = new File(fullPath);
+                if (modelDir.exists() && modelDir.isDirectory()) {
+                    System.out.println("找到情感分析模型路径: " + fullPath);
+                    break;
+                }
+            }
+        }
+
+        String absolutePath = modelDir.getAbsolutePath();
+        System.out.println("情感分析模型路径: " + absolutePath);
+
         if (!modelDir.exists()) {
-            throw new IOException("情感分析模型目录不存在: " + modelDir.getAbsolutePath());
+            throw new IOException("情感分析模型目录不存在: " + absolutePath +
+                    "\n请确保 '" + modelName + "' 目录在项目根目录或rec-system目录下");
         }
 
         Criteria<String, Classifications> criteria = Criteria.builder()
