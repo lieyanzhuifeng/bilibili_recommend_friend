@@ -51,7 +51,14 @@ async function post(path, body) {
 }
 
 export const userApi = {
-  getUserInfo: (userId) => get(`/api/users/${userId}`)
+  // 用户相关API（按照API2.md文档）
+  getUserInfo: (userId) => get(`/api/users/${userId}`),
+  // 搜索用户（根据关键词）
+  searchUsers: (keyword) => get('/api/users/search', { keyword }),
+  // 搜索视频（根据视频标题）
+  searchVideos: (keyword) => get('/api/users/videos/search', { keyword }),
+  // 搜索标签（根据标签名称）
+  searchTags: (keyword) => get('/api/users/tags/search', { keyword })
 }
 
 export const friendApi = {
@@ -67,8 +74,8 @@ export const friendApi = {
   getFriendRequests: (userId) => get(`/api/friends/requests/${userId}`),
   getFriendCount: (userId) => get(`/api/friends/count/${userId}`),
   getRequestCount: (userId) => get(`/api/friends/requests/count/${userId}`),
-  // 新增方法，用于组件中的搜索用户
-  searchUsers: (query) => get('/api/users/search', { query }),
+  // 搜索用户方法（按照API2.md文档，参数名改为keyword）
+  searchUsers: (keyword) => get('/api/users/search', { keyword }),
   // 新增方法，发送好友申请（适配组件中的调用方式）
   sendFriendRequest: (targetUserId) => {
     // 确保userId是有效的，避免使用'current'作为默认值
@@ -87,6 +94,7 @@ export const friendApi = {
     if (!userId) {
       throw new Error('用户未登录，请先登录');
     }
+    // 按照API2.md文档，使用请求体传递参数
     return post(`/api/friends/request?userId=${userId}&targetUserId=${targetUserId}`);
   },
   // 获取好友列表（适配组件中的调用方式）
@@ -112,14 +120,14 @@ export const friendApi = {
 }
 
 export const messageApi = {
-  // 适配组件调用的发送消息方法 - 使用URL查询参数
+  // 发送消息方法（按照API2.md文档，使用请求体传递参数）
   sendMessage: async (data) => {
     const { receiverId, content } = data;
     const senderId = localStorage.getItem('userId') || 'current';
-    // 使用URL查询参数传递senderId、receiverId和content
-    const response = await post(`/api/messages/send?senderId=${senderId}&receiverId=${receiverId}&content=${encodeURIComponent(content)}`);
+    // 使用请求体传递参数
+    const response = await post('/api/messages/send', { senderId, receiverId, content });
     // 返回格式适配前端组件
-    return { message: response.message || response };
+    return { message: response };
   },
   // 获取会话列表（适配组件调用）
   getConversations: async () => {
@@ -159,10 +167,11 @@ export const messageApi = {
       body: JSON.stringify({ userId, lastMessageId: null })
     });
   },
-  // 获取未读消息数量（适配组件调用）
-  getUnreadCount: async () => {
-    const userId = localStorage.getItem('userId') || 'current';
-    const response = await get('/api/messages/unread-count', { userId });
+  // 获取未读消息数量（按照API2.md文档，需要两个参数）
+  getUnreadCount: async ({ userId, lastMessageId }) => {
+    // 如果未提供userId，从localStorage获取
+    const currentUserId = userId || localStorage.getItem('userId') || 'current';
+    const response = await get('/api/messages/unread-count', { userId: currentUserId, lastMessageId });
     return response;
   },
   // 保留原有API方法供其他场景使用
@@ -196,30 +205,25 @@ export const messageApi = {
 }
 
 export const recommendApi = {
-  // 主要推荐API（按照API文档格式）
-  commonUp: (userId) => get(`/api/recommend/common-up/${userId}`),
-  sharedVideo: (userId) => get(`/api/recommend/shared-video/${userId}`),
-  userBehavior: (userId) => get(`/api/recommend/user-behavior/${userId}`),
+  // 推荐相关API（按照API2.md文档）
   coComment: (userId) => get(`/api/recommend/co-comment/${userId}`),
-  theme: (userId) => get(`/api/recommend/theme/${userId}`),
-
-  // 其他推荐API（与文档保持一致）
   reply: (userId) => get(`/api/recommend/reply/${userId}`),
+  sharedVideo: (userId) => get(`/api/recommend/shared-video/${userId}`),
   category: (userId) => get(`/api/recommend/category/${userId}`),
+  theme: (userId) => get(`/api/recommend/theme/${userId}`),
+  userBehavior: (userId) => get(`/api/recommend/user-behavior/${userId}`),
+  commonUp: (userId) => get(`/api/recommend/common-up/${userId}`),
   favoriteSimilarity: (userId) => get(`/api/recommend/favorite-similarity/${userId}`),
-  commentFriends: (userId) => get(`/api/recommend/comment-friends/${userId}`),
-  getUserRecommend: (userId) => get(`/api/recommend/user/${userId}`),
-  getCommonFriend: (userId) => get(`/api/recommend/common-friend/${userId}`),
-  getCommonInterest: (userId) => get(`/api/recommend/common-interest/${userId}`)
+  commentFriends: (userId) => get(`/api/recommend/comment-friends/${userId}`)
 }
 
 export const filterApi = {
-  // 主要筛选API（按照用户要求的5个）
-  sameUp: (params = {}) => get('/api/filter/same-up', params),
-  sameTag: (params = {}) => get('/api/filter/same-tag', params),
+  // 筛选相关API（按照API2.md文档）
+  sameUp: ({ upId, durationOption } = {}) => get('/api/filter/same-up', { upId, durationOption }),
+  sameTag: ({ tagId, durationOption } = {}) => get('/api/filter/same-tag', { tagId, durationOption }),
   sameUpVideoCount: (body) => post('/api/filter/same-up-video-count', body),
-  sameTagVideoCount: (params = {}) => get('/api/filter/same-tag-video-count', params),
-  deepVideo: (params = {}) => get('/api/filter/deep-video', params),
+  sameTagVideoCount: ({ tagId, ratioOption } = {}) => get('/api/filter/same-tag-video-count', { tagId, ratioOption }),
+  deepVideo: ({ videoId, option } = {}) => get('/api/filter/deep-video', { videoId, option }),
 
   // 其他筛选API
   followTime: ({ userId, upId } = {}) => get('/api/filter/follow-time', { userId, upId }),

@@ -47,7 +47,13 @@
           </div>
           <div class="user-info">
             <h3 class="username">{{ user.username }}</h3>
-            <p class="similarity-rate">相似度: {{ getHighestSimilarity(user) }}%</p>
+            <button
+              class="add-friend-btn"
+              @click.stop="sendFriendRequest(user.userId, $event)"
+              :disabled="addingFriendId === user.userId"
+            >
+              {{ addingFriendId === user.userId ? '添加中...' : '添加好友' }}
+            </button>
           </div>
         </div>
       </div>
@@ -73,14 +79,20 @@
         <h4>{{ tooltipUser?.username }}</h4>
       </div>
       <div class="tooltip-content">
-        <div
-          v-for="(value, key) in getDetailedInfo(tooltipUser)"
-          :key="key"
-          class="tooltip-item"
-        >
-          <span class="tooltip-label">{{ formatKey(key) }}:</span>
-          <span class="tooltip-value">{{ formatValue(value, key) }}</span>
+        <!-- 显示定制化提示文本 -->
+        <div v-if="getCustomTooltipText(tooltipUser)" class="custom-tooltip-text" v-html="getCustomTooltipText(tooltipUser)">
         </div>
+        <!-- 如果没有定制化文本，则显示详细信息 -->
+        <template v-else>
+          <div
+            v-for="(value, key) in getDetailedInfo(tooltipUser)"
+            :key="key"
+            class="tooltip-item"
+          >
+            <span class="tooltip-label">{{ formatKey(key) }}:</span>
+            <span class="tooltip-value">{{ formatValue(value, key) }}</span>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -91,7 +103,7 @@ import { ref, computed, onMounted } from 'vue'
 // 移除不存在的store导入
 // import { useRecommendStore } from '@/store/recommend'
 // import { useUserStore } from '@/store/user'
-import { recommendApi } from '@/services/api'
+import { recommendApi, friendApi } from '@/services/api'
 
 // 本地状态管理
 // const recommendStore = useRecommendStore()
@@ -118,6 +130,7 @@ const messageType = ref('info')
 const tooltipVisible = ref(false)
 const tooltipUser = ref(null)
 const tooltipStyle = ref({})
+const addingFriendId = ref(null)
 
 // 默认头像
 const defaultAvatar = '/avatar-placeholder.png'
@@ -262,6 +275,72 @@ function showMessage(text, type = 'info') {
   }, 3000)
 }
 
+// 根据API类型获取定制化的提示文本，支持多推荐条件
+function getCustomTooltipText(user) {
+  if (!user || !user.sourceApis) return '';
+
+  const tooltipTexts = [];
+
+  // 处理所有推荐来源API
+  user.sourceApis.forEach(apiKey => {
+    let text = '';
+
+    switch (apiKey) {
+      case 'coComment':
+        if (user.videoTitle) {
+          // 使用颜色标记视频标题
+          text = `你和<span class="highlight">${user.username}</span>都在<span class="highlight-important">《${user.videoTitle}》</span>下评论过，认识一下叭。`;
+        }
+        break;
+      case 'reply':
+        text = `<span class="highlight">${user.username}</span>曾经回复过你的评论，认识一下叭。`;
+        break;
+      case 'sharedVideo':
+        if (user.similarityRate !== undefined) {
+          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${(user.similarityRate * 100).toFixed(1)}%</span>`;
+        }
+        break;
+      case 'category':
+        if (user.commonCategories && user.categoryMatchScore !== undefined) {
+          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${user.commonCategories.join('、')}</span>分区的内容，他的推荐分数为<span class="highlight-score">${mapCategoryScore(user.categoryMatchScore)}</span>`;
+        }
+        break;
+      case 'theme':
+        if (user.commonThemes && user.themeMatchScore !== undefined) {
+          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${user.commonThemes.join('、')}</span>的内容形式，他的推荐分数为<span class="highlight-score">${mapCategoryScore(user.themeMatchScore)}</span>`;
+        }
+        break;
+      case 'userBehavior':
+        if (user.similarityScore !== undefined) {
+          text = `你和<span class="highlight">${user.username}</span>观看视频习惯的相似度为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
+        }
+        break;
+      case 'commonUp':
+        if (user.commonUpCount !== undefined && user.commonUpNames) {
+          text = `你和<span class="highlight">${user.username}</span>有<span class="highlight-important">${user.commonUpCount}</span>个共同关注UP主，分别是<span class="highlight-important">${user.commonUpNames.join('、')}</span>`;
+        }
+        break;
+      case 'favoriteSimilarity':
+        if (user.similarityScore !== undefined) {
+          text = `你和<span class="highlight">${user.username}</span>收藏视频的相似度很高，为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
+        }
+        break;
+    }
+
+    if (text) {
+      tooltipTexts.push(text);
+    }
+  });
+
+  // 如果有多个推荐条件，用换行符分隔显示
+  if (tooltipTexts.length > 0) {
+    return tooltipTexts.join('<br>');
+  }
+
+  // 默认返回空字符串，使用原来的详细信息显示
+  return '';
+}
+
 // 显示悬停提示
 function showTooltip(user, event) {
   tooltipUser.value = user
@@ -296,6 +375,13 @@ function getDetailedInfo(user) {
   return detailedInfo
 }
 
+// 分区重合度映射函数 f(x)：将0-3分映射到80-100分
+function mapCategoryScore(score) {
+  // 使用一个简单的二次函数映射，确保分数在80-100之间
+  const mappedScore = 80 + Math.pow(score / 3, 1.5) * 20;
+  return Math.min(100, Math.max(80, mappedScore)).toFixed(1);
+}
+
 // 格式化键名显示
 function formatKey(key) {
   return key.replace(/([A-Z])/g, ' $1')
@@ -312,9 +398,25 @@ function formatKey(key) {
 
 // 格式化值显示
 function formatValue(value, key) {
+  // 分区重合度特殊处理
+  if (key === 'categoryMatchScore' && typeof value === 'number') {
+    return mapCategoryScore(value);
+  }
+  // 内容类型重合度特殊处理
+  if (key === 'themeMatchScore' && typeof value === 'number') {
+    return mapCategoryScore(value);
+  }
+  // 用户行为相似度特殊处理（转换为百分比）
+  if (key === 'similarityScore' && tooltipUser.value && tooltipUser.value.sourceApis?.includes('userBehavior')) {
+    return `${(value * 100).toFixed(1)}%`;
+  }
   // 相似度值转换为百分比
   if (key.toLowerCase().includes('similarity') && typeof value === 'number' && value <= 1) {
     return `${(value * 100).toFixed(1)}%`
+  }
+  // 数组类型的值处理
+  if (Array.isArray(value)) {
+    return value.join('、');
   }
   return value
 }
@@ -333,6 +435,20 @@ function getHighestSimilarity(user) {
   })
 
   return (maxSimilarity * 100).toFixed(1)
+}
+
+// 发送好友申请
+async function sendFriendRequest(targetUserId, event) {
+  try {
+    addingFriendId.value = targetUserId
+    await friendApi.sendFriendRequest(targetUserId)
+    showMessage('好友申请发送成功', 'success')
+  } catch (error) {
+    console.error('发送好友申请失败:', error)
+    showMessage(error.message || '发送好友申请失败，请稍后重试', 'error')
+  } finally {
+    addingFriendId.value = null
+  }
 }
 
 // 生成模拟头像路径
@@ -562,6 +678,32 @@ onMounted(() => {
   font-size: 14px;
   color: #ff69b4;
   font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.add-friend-btn {
+  padding: 8px 16px;
+  background-color: #ff69b4;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-friend-btn:hover:not(:disabled) {
+  background-color: #ff1493;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+}
+
+.add-friend-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .empty-state {
@@ -635,6 +777,28 @@ onMounted(() => {
 
 .tooltip-content {
   font-size: 14px;
+}
+
+.custom-tooltip-text {
+  color: #ffffff;
+  font-weight: 500;
+  line-height: 1.6;
+  padding: 5px 0;
+}
+
+.custom-tooltip-text .highlight {
+  color: #ff69b4;
+  font-weight: 600;
+}
+
+.custom-tooltip-text .highlight-important {
+  color: #00ffff;
+  font-weight: 700;
+}
+
+.custom-tooltip-text .highlight-score {
+  color: #ff9800;
+  font-weight: 700;
 }
 
 .tooltip-item {
