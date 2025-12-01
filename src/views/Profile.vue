@@ -11,7 +11,13 @@
               class="user-avatar"
             />
             <div class="user-info">
-              <h1 class="username">{{ displayName }}</h1>
+              <div class="user-header">
+                <h1 class="username">{{ displayName }}</h1>
+                <button class="message-notification" @click="goToChat()" :title="totalUnread > 0 ? `您有${totalUnread}条未读消息` : '没有未读消息'">
+                  <span class="message-icon">💬</span>
+                  <span v-if="totalUnread > 0" class="notification-badge">{{ totalUnread }}</span>
+                </button>
+              </div>
               <p class="user-id">UID: {{ userStore.userId }}</p>
               <div class="user-stats">
                 <div class="stat-item">
@@ -319,6 +325,11 @@ export default {
 
     // 计算最近互动的好友
     const recentFriends = ref([])
+    
+    // 计算总未读消息数量
+    const totalUnread = computed(() => {
+      return chatStore.totalUnreadCount || 0
+    })
 
     // 计算展示名：优先使用 userStore.username，若 username 等于 userId 或为空则尝试从 recommend 列表中取 API 返回的 username
     const displayName = computed(() => {
@@ -363,7 +374,11 @@ export default {
     })
 
     const goToChat = (userId) => {
-      router.push(`/chat/${userId}`)
+      if (userId) {
+        router.push(`/chat/${userId}`)
+      } else {
+        router.push('/chat')
+      }
     }
 
     function avatar(u) {
@@ -406,7 +421,8 @@ export default {
       viewAllRecommendations,
       avatar,
       displayName,
-      goToChat
+      goToChat,
+      totalUnread
     }
   }
 }
@@ -456,10 +472,56 @@ export default {
   object-fit: cover;
 }
 
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 5px;
+}
+
 .user-info h1 {
-  margin: 0 0 5px 0;
+  margin: 0;
   font-size: 28px;
   font-weight: 700;
+  flex: 1;
+}
+
+.message-notification {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.message-notification:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.message-icon {
+  font-size: 20px;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--danger-color);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  border: 2px solid white;
 }
 
 .user-id {

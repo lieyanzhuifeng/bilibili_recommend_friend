@@ -120,45 +120,127 @@ export const friendApi = {
 }
 
 export const messageApi = {
-  // 发送消息方法（按照API2.md文档，使用请求体传递参数）
-  sendMessage: async (data) => {
+  // 1. 发送消息
+  sendMessage: (senderId, receiverId, content) => post(`/api/messages/send?senderId=${senderId}&receiverId=${receiverId}&content=${encodeURIComponent(content)}`),
+
+  // 2. 获取最近聊天记录
+  getRecentChat: (user1, user2, limit) => get('/api/messages/recent-chat', { user1, user2, limit }),
+
+  // 3. 获取增量消息（基于ID）
+  getNewMessagesById: (userId, lastMessageId) => get('/api/messages/new-messages/id', { userId, lastMessageId }),
+
+  // 4. 获取增量消息（基于时间戳）
+  getNewMessagesByTime: (userId, lastTime) => get('/api/messages/new-messages/time', { userId, lastTime }),
+
+  // 5. 获取完整聊天记录
+  getFullChat: (user1, user2) => get('/api/messages/full-chat', { user1, user2 }),
+
+  // 6. 获取未读消息数量
+  getUnreadCount: (userId, lastMessageId) => get('/api/messages/unread-count', { userId, lastMessageId }),
+
+  // 7. 删除消息
+  deleteMessage: (messageId) => request(`/api/messages/${messageId}`, { method: 'DELETE' }),
+
+  // 8. 删除发送者所有消息
+  deleteSenderMessages: (senderId) => request(`/api/messages/sender/${senderId}`, { method: 'DELETE' }),
+
+  // 9. 删除接收者所有消息
+  deleteReceiverMessages: (receiverId) => request(`/api/messages/receiver/${receiverId}`, { method: 'DELETE' }),
+
+  // 10. 删除聊天记录
+  deleteChatHistory: (user1, user2) => request('/api/messages/chat-history', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user1, user2 })
+  }),
+
+  // 11. 获取发送者所有消息
+  getSenderMessages: (senderId) => get(`/api/messages/sender/${senderId}`),
+
+  // 12. 获取接收者所有消息
+  getReceiverMessages: (receiverId) => get(`/api/messages/receiver/${receiverId}`),
+
+  // 13. 获取时间段内聊天记录
+  getTimeRangeMessages: (user1, user2, startTime, endTime) => get('/api/messages/time-range', { user1, user2, startTime, endTime }),
+
+  // 14. 统计发送者消息数量
+  getSenderMessageCount: (senderId) => get(`/api/messages/count/sender/${senderId}`),
+
+  // 15. 统计接收者消息数量
+  getReceiverMessageCount: (receiverId) => get(`/api/messages/count/receiver/${receiverId}`),
+
+  // 16. 统计总消息数量
+  getTotalMessageCount: () => get('/api/messages/count/total'),
+
+  // 17. 搜索用户消息内容
+  searchUserMessages: (userId, keyword) => get('/api/messages/search/user', { userId, keyword }),
+
+  // 18. 搜索聊天记录内容
+  searchChatMessages: (user1, user2, keyword) => get('/api/messages/search/chat', { user1, user2, keyword }),
+
+  // 19. 标记消息为已读
+  markMessageAsRead: (messageId) => request(`/api/messages/${messageId}/read`, { method: 'PUT' }),
+
+  // 20. 标记所有消息为已读
+  markAllAsRead: (userId, lastMessageId) => request('/api/messages/mark-all-read', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, lastMessageId })
+  }),
+
+  // 21. 获取聊天伙伴列表
+  getChatPartners: (userId) => get(`/api/messages/chat-partners/${userId}`),
+
+  // 组件适配方法
+  // 发送消息适配
+  sendMessageAdapted: async (data) => {
     const { receiverId, content } = data;
     const senderId = localStorage.getItem('userId') || 'current';
-    // 使用请求体传递参数
     const response = await post('/api/messages/send', { senderId, receiverId, content });
-    // 返回格式适配前端组件
     return { message: response };
   },
-  // 获取会话列表（适配组件调用）
+
+  // 获取会话列表适配
   getConversations: async () => {
     const userId = localStorage.getItem('userId') || 'current';
-    const chatPartners = await get(`/api/messages/chat-partners/${userId}`);
-    // 转换为组件需要的格式
-    const conversations = (chatPartners.partners || []).map(partner => ({
-      id: partner.id,
-      name: partner.name || partner.username,
-      avatar: partner.avatar,
-      isOnline: partner.status === 'online',
-      lastMessage: partner.lastMessage?.content || '',
-      lastMessageTime: partner.lastMessage?.timestamp || new Date().toISOString(),
-      unreadCount: partner.unreadCount || 0
-    }));
-    return { conversations };
+    try {
+      const partners = await get(`/api/messages/chat-partners/${userId}`);
+      // 模拟转换为组件需要的格式
+      const conversations = (Array.isArray(partners) ? partners : []).map(partnerId => ({
+        id: partnerId,
+        name: `用户${partnerId}`,
+        avatar: avatarUrl({ id: partnerId }),
+        isOnline: true,
+        lastMessage: '',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0
+      }));
+      return { conversations };
+    } catch (error) {
+      console.error('获取会话列表失败:', error);
+      return { conversations: [] };
+    }
   },
-  // 获取聊天历史（适配组件调用）
+
+  // 获取聊天历史适配
   getChatHistory: async (chatId) => {
     const userId = localStorage.getItem('userId') || 'current';
-    const messages = await get('/api/messages/full-chat', { user1: userId, user2: chatId });
-    // 转换为组件需要的格式
-    const formattedMessages = (messages.messages || []).map(msg => ({
-      id: msg.id,
-      content: msg.content,
-      isMine: msg.senderId === userId,
-      timestamp: msg.timestamp
-    }));
-    return { messages: formattedMessages };
+    try {
+      const messages = await get('/api/messages/full-chat', { user1: userId, user2: chatId });
+      const formattedMessages = (messages || []).map(msg => ({
+        id: msg.messageId,
+        content: msg.content,
+        isMine: msg.senderId === userId,
+        timestamp: msg.sendTime
+      }));
+      return { messages: formattedMessages };
+    } catch (error) {
+      console.error('获取聊天历史失败:', error);
+      return { messages: [] };
+    }
   },
-  // 标记为已读（适配组件调用）
+
+  // 标记为已读适配
   markAsRead: async (chatId) => {
     const userId = localStorage.getItem('userId') || 'current';
     return request('/api/messages/mark-all-read', {
@@ -166,42 +248,7 @@ export const messageApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, lastMessageId: null })
     });
-  },
-  // 获取未读消息数量（按照API2.md文档，需要两个参数）
-  getUnreadCount: async ({ userId, lastMessageId }) => {
-    // 如果未提供userId，从localStorage获取
-    const currentUserId = userId || localStorage.getItem('userId') || 'current';
-    const response = await get('/api/messages/unread-count', { userId: currentUserId, lastMessageId });
-    return response;
-  },
-  // 保留原有API方法供其他场景使用
-  getRecentChat: (user1, user2, limit) => get('/api/messages/recent-chat', { user1, user2, limit }),
-  getNewMessagesById: (userId, lastMessageId) => get('/api/messages/new-messages/id', { userId, lastMessageId }),
-  getNewMessagesByTime: (userId, lastTime) => get('/api/messages/new-messages/time', { userId, lastTime }),
-  getFullChat: (user1, user2) => get('/api/messages/full-chat', { user1, user2 }),
-  deleteMessage: (messageId) => request(`/api/messages/${messageId}`, { method: 'DELETE' }),
-  deleteSenderMessages: (senderId) => request(`/api/messages/sender/${senderId}`, { method: 'DELETE' }),
-  deleteReceiverMessages: (receiverId) => request(`/api/messages/receiver/${receiverId}`, { method: 'DELETE' }),
-  deleteChatHistory: (user1, user2) => request('/api/messages/chat-history', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user1, user2 })
-  }),
-  getSenderMessages: (senderId) => get(`/api/messages/sender/${senderId}`),
-  getReceiverMessages: (receiverId) => get(`/api/messages/receiver/${receiverId}`),
-  getTimeRangeMessages: (user1, user2, startTime, endTime) => get('/api/messages/time-range', { user1, user2, startTime, endTime }),
-  getSenderMessageCount: (senderId) => get(`/api/messages/count/sender/${senderId}`),
-  getReceiverMessageCount: (receiverId) => get(`/api/messages/count/receiver/${receiverId}`),
-  getTotalMessageCount: () => get('/api/messages/count/total'),
-  searchUserMessages: (userId, keyword) => get('/api/messages/search/user', { userId, keyword }),
-  searchChatMessages: (user1, user2, keyword) => get('/api/messages/search/chat', { user1, user2, keyword }),
-  markMessageAsRead: (messageId) => request(`/api/messages/${messageId}/read`, { method: 'PUT' }),
-  markAllAsRead: (userId, lastMessageId) => request('/api/messages/mark-all-read', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, lastMessageId })
-  }),
-  getChatPartners: (userId) => get(`/api/messages/chat-partners/${userId}`)
+  }
 }
 
 export const recommendApi = {
