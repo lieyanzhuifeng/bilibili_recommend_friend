@@ -1,52 +1,5 @@
 <template>
   <div class="chat-container">
-    <!-- 聊天侧边栏 -->
-    <div class="chat-sidebar">
-      <!-- 搜索栏 -->
-      <div class="search-bar">
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="搜索聊天..."
-          class="search-input"
-        />
-        <i class="search-icon">🔍</i>
-      </div>
-
-      <!-- 聊天列表 -->
-      <div class="chat-list">
-        <div
-          v-for="conversation in filteredConversations"
-          :key="conversation.id"
-          class="chat-item"
-          :class="{ active: currentChatId === conversation.id }"
-          @click="selectChat(conversation)"
-        >
-          <div class="chat-avatar">
-            <img :src="conversation.avatar" alt="头像" />
-            <span v-if="conversation.isOnline" class="online-indicator"></span>
-          </div>
-          <div class="chat-info">
-            <div class="chat-header">
-              <h4 class="chat-name">{{ conversation.name }}</h4>
-              <span class="chat-time">{{ formatTime(conversation.lastMessageTime) }}</span>
-            </div>
-            <div class="chat-preview">
-              <span v-if="conversation.unreadCount > 0" class="unread-badge">{{ conversation.unreadCount }}</span>
-              <p class="chat-message">{{ conversation.lastMessage }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 无聊天时的提示 -->
-        <div v-if="filteredConversations.length === 0" class="no-chats">
-          <div class="no-chats-icon">💬</div>
-          <p>暂无聊天记录</p>
-          <Button type="primary" size="small" @click="navigateToFriends">添加好友</Button>
-        </div>
-      </div>
-    </div>
-
     <!-- 聊天主窗口 -->
     <div class="chat-main">
       <!-- 未选择聊天时的提示 -->
@@ -59,17 +12,17 @@
       <!-- 聊天窗口 -->
       <template v-else>
         <!-- 聊天头部 -->
-        <div class="chat-header-bar">
-          <div class="chat-contact-info">
-            <div class="contact-avatar">
-              <img :src="currentChat.avatar" alt="头像" />
-              <span v-if="currentChat.isOnline" class="online-indicator"></span>
-            </div>
-            <div class="contact-details">
-              <h3 class="contact-name">{{ currentChat.name }}</h3>
-              <p class="contact-status">{{ currentChat.isOnline ? '在线' : '离线' }}</p>
-            </div>
-          </div>
+    <div class="chat-header-bar">
+      <div class="chat-contact-info">
+        <div class="contact-avatar">
+          <img :src="currentChat.avatar" alt="头像" />
+          <span v-if="currentChat.isOnline" class="online-indicator"></span>
+        </div>
+        <div class="contact-details">
+          <h3 class="contact-name">{{ currentChat.name }}</h3>
+          <p class="contact-status">{{ currentChat.isOnline ? '在线' : '离线' }}</p>
+        </div>
+      </div>
           <div class="chat-actions">
             <button class="action-btn" title="查看资料" @click="viewUserProfile">
               <i>👤</i>
@@ -126,8 +79,10 @@
           </div>
         </div>
 
-        <!-- 聊天消息区域 -->
-        <div class="chat-messages" ref="messagesContainer">
+    
+
+    <!-- 聊天消息区域 -->
+    <div class="chat-messages" ref="messagesContainer">
           <div
             v-for="message in currentMessages"
             :key="message.id"
@@ -149,7 +104,7 @@
                 <span v-if="isMyMessage(message)" class="message-status" :title="getStatusTitle(message.status)">
                   {{ getStatusIcon(message.status) }}
                 </span>
-                <span v-if="!isMyMessage(message) && !message.isRead" class="unread-indicator">未读</span>
+                <!-- <span v-if="!isMyMessage(message) && !message.isRead" class="unread-indicator">未读</span> -->
               </div>
             </div>
             <div v-if="!isMyMessage(message)" class="message-avatar">
@@ -312,30 +267,92 @@ export default {
       return chatStore.getCurrentConversation || []
     })
 
-    const filteredConversations = computed(() => {
-      if (!searchQuery.value) {
-        return chatStore.conversations
-      }
-
-      const query = searchQuery.value.toLowerCase()
-      return chatStore.conversations.filter(conv =>
-        conv.name.toLowerCase().includes(query) ||
-        conv.lastMessage.toLowerCase().includes(query)
-      )
-    })
-
     // 方法
     const selectChat = async (conversation) => {
-      currentChatId.value = conversation.id
-      chatStore.setCurrentChat(conversation.id)
+      try {
+        console.log(`选择聊天会话: ${conversation.id} - ${conversation.name}`)
 
-      // 获取聊天历史
-      await chatStore.fetchChatHistory(conversation.id)
+        // 设置当前聊天ID
+        currentChatId.value = conversation.id
 
-      // 滚动到底部
-      nextTick(() => {
-        scrollToBottom()
-      })
+        // 设置当前聊天到store
+        if (chatStore.setCurrentChat) {
+          chatStore.setCurrentChat(conversation.id)
+        }
+
+        // 获取聊天历史，添加错误处理
+        try {
+          console.log(`正在获取与${conversation.id}的历史消息`)
+          if (chatStore.fetchChatHistory) {
+            await chatStore.fetchChatHistory(conversation.id)
+            console.log('历史消息获取完成')
+          } else {
+            console.warn('chatStore.fetchChatHistory方法不存在，尝试使用备用方式获取消息')
+
+            // 备用逻辑：如果store没有fetchChatHistory方法，尝试直接设置模拟消息
+            if (!chatStore.getCurrentConversation || chatStore.getCurrentConversation.length === 0) {
+              // 添加一些模拟消息以便展示
+              const mockMessages = [
+                {
+                  id: 'mock-1',
+                  content: '嗨！很高兴认识你！',
+                  createdAt: new Date(Date.now() - 3600000).toISOString(),
+                  senderId: conversation.id,
+                  status: 'received',
+                  isRead: true
+                },
+                {
+                  id: 'mock-2',
+                  content: '你好！',
+                  createdAt: new Date(Date.now() - 1800000).toISOString(),
+                  senderId: 'current-user',
+                  status: 'sent',
+                  isRead: true
+                }
+              ]
+
+              // 如果有设置消息的方法，使用它
+              if (chatStore.setMessages) {
+                chatStore.setMessages(conversation.id, mockMessages)
+              }
+            }
+          }
+        } catch (fetchError) {
+          console.error(`获取历史消息失败:`, fetchError)
+          console.info('显示模拟消息以便用户体验')
+
+          // 显示模拟消息
+          const mockMessages = [
+            {
+              id: 'mock-error-1',
+              content: '历史消息暂时无法加载，但您可以继续发送新消息。',
+              createdAt: new Date().toISOString(),
+              senderId: 'system',
+              status: 'received',
+              isRead: true
+            }
+          ]
+
+          if (chatStore.setMessages) {
+            chatStore.setMessages(conversation.id, mockMessages)
+          }
+        }
+
+        // 滚动到底部
+        nextTick(() => {
+          scrollToBottom()
+        })
+
+        // 标记消息为已读
+        if (chatStore.markAsRead) {
+          chatStore.markAsRead(conversation.id).catch(err => {
+            console.warn('标记已读失败:', err)
+          })
+        }
+      } catch (error) {
+        console.error('选择聊天会话失败:', error)
+        showError('加载聊天会话失败')
+      }
     }
 
     const formatTime = (timestamp) => {
@@ -419,8 +436,22 @@ export default {
       showSendingIndicator.value = true
 
       try {
-        // 直接调用store的发送消息方法
-        await chatStore.sendMessage(currentChatId.value, content)
+        // 创建临时消息ID，避免重复显示
+        const tempMessageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+        // 创建本地消息对象
+        const localMessage = {
+          id: tempMessageId,
+          content,
+          createdAt: new Date().toISOString(),
+          senderId: 'current-user', // 假设当前用户ID标识
+          status: 'sending'
+        }
+
+        // 如果store支持添加临时消息，则添加到本地消息列表
+        if (chatStore.addLocalMessage) {
+          chatStore.addLocalMessage(currentChatId.value, localMessage)
+        }
 
         // 清空输入框
         messageInput.value = ''
@@ -429,6 +460,12 @@ export default {
         nextTick(() => {
           scrollToBottom()
         })
+
+        // 调用store的发送消息方法
+        await chatStore.sendMessage(currentChatId.value, content)
+
+        // 注意：不再手动刷新消息列表，避免重复显示
+        // 让store负责更新消息状态，而不是重新获取整个列表
       } catch (error) {
         console.error('发送消息失败:', error)
         failedMessage.value = { content }
@@ -664,61 +701,82 @@ export default {
 
     // 生命周期钩子
     onMounted(async () => {
-      // 从API获取聊天伙伴列表
-      await chatStore.fetchChatPartners()
+      try {
+        // 直接从URL参数获取userid，确保值有效
+        const userId = route.query.userId || route.query.friendId
+        const userName = route.query.userName || route.query.friendName
 
-      // 检查URL查询参数，看是否从Friends.vue跳转过来
-      const friendId = route.query.friendId
-      const friendName = route.query.friendName
+        if (userId && typeof userId === 'string') {
+          console.log(`正在加载与用户${userId}的聊天记录`)
 
-      if (friendId) {
-        // 查找是否已有该好友的会话
-        let conversation = chatStore.conversations.find(c => c.id === friendId)
+          // 查找是否已有该用户的会话
+          let conversation = chatStore.conversations?.find(c => c.id === userId)
 
-        // 如果没有找到会话，创建一个新的会话对象
-        if (!conversation) {
-          conversation = {
-            id: friendId,
-            name: friendName || `用户${friendId}`,
-            avatar: generateRandomAvatar(friendId.toString()),
-            isOnline: false,
-            lastMessage: '',
-            lastMessageTime: new Date().toISOString(),
-            unreadCount: 0
+          // 如果没有找到会话，创建一个新的会话对象
+          if (!conversation) {
+            console.log(`未找到会话，为用户${userId}创建新会话`)
+            conversation = {
+              id: userId,
+              name: userName || `用户${userId}`,
+              avatar: generateRandomAvatar(userId.toString()),
+              isOnline: false,
+              isFriend: true, // 从好友页面过来的都默认为好友
+              lastMessage: '',
+              lastMessageTime: new Date().toISOString(),
+              unreadCount: 0,
+              // 确保会话对象有必要的属性
+              messages: [],
+              createdAt: new Date().toISOString()
+            }
+
+            // 安全地添加到会话列表
+            if (Array.isArray(chatStore.conversations)) {
+              chatStore.conversations.push(conversation)
+            }
           }
-          // 添加到会话列表
-          chatStore.conversations.push(conversation)
+
+          // 设置当前聊天ID
+          currentChatId.value = userId
+
+          // 选择该会话并获取历史消息
+          await selectChat(conversation)
+        } else {
+          console.warn('URL参数中未提供有效的userId')
+          showError('请选择一个好友进行聊天')
+          setTimeout(() => {
+            navigateToFriends()
+          }, 2000)
         }
+      } catch (error) {
+        console.error('初始化聊天页面失败:', error)
+        showError('加载聊天页面失败，请重试')
+        setTimeout(() => {
+          navigateToFriends()
+        }, 2000)
+      } finally {
+        // 添加点击外部事件监听
+        document.addEventListener('click', handleClickOutside)
 
-        // 选择该会话
-        selectChat(conversation)
-      } else if (chatStore.conversations.length > 0) {
-        // 默认选择第一个聊天
-        selectChat(chatStore.conversations[0])
-      }
+        // 调整输入框高度
+        adjustTextareaHeight()
 
-      // 添加点击外部事件监听
-      document.addEventListener('click', handleClickOutside)
-
-      // 调整输入框高度
-      adjustTextareaHeight()
-
-      // 监听窗口大小变化，调整布局
-      window.addEventListener('resize', () => {
-        nextTick(() => {
-          scrollToBottom()
+        // 监听窗口大小变化，调整布局
+        window.addEventListener('resize', () => {
+          nextTick(() => {
+            scrollToBottom()
+          })
         })
-      })
 
-      // 定期检查新消息
-      const messageInterval = setInterval(() => {
-        checkForNewMessages()
-      }, 30000) // 每30秒检查一次新消息
+        // 定期检查新消息
+        const messageInterval = setInterval(() => {
+          checkForNewMessages()
+        }, 30000) // 每30秒检查一次新消息
 
-      // 清理定时器
-      onUnmounted(() => {
-        clearInterval(messageInterval)
-      })
+        // 清理定时器
+        onUnmounted(() => {
+          clearInterval(messageInterval)
+        })
+      }
     })
 
     onUnmounted(() => {
@@ -726,14 +784,19 @@ export default {
       window.removeEventListener('resize', () => {})
     })
 
+    // 添加好友
+    const addFriend = (userId) => {
+      // 调用用户相关API添加好友
+      alert(`发送好友请求给用户${userId}`)
+      // 实际应用中这里应该调用API发送好友请求
+    }
+
     return {
       currentChatId,
       currentChat,
       currentMessages,
-      searchQuery,
       messageSearchQuery,
       messageSearchResults,
-      filteredConversations,
       messageInput,
       isSending,
       showSendingIndicator,
@@ -767,7 +830,8 @@ export default {
       markAsRead,
       isMyMessage,
       getStatusIcon,
-      getStatusTitle
+      getStatusTitle,
+      addFriend
     }
   }
 }
@@ -775,21 +839,54 @@ export default {
 
 <style scoped>
 .chat-container {
-  display: flex;
   height: calc(100vh - var(--navbar-height, 60px));
   margin-top: var(--navbar-height, 60px);
   background-color: var(--background-color);
   z-index: 100;
 }
 
-/* 侧边栏样式 */
-.chat-sidebar {
-  width: 320px;
-  background-color: var(--sidebar-background);
-  border-right: 1px solid var(--border-color);
+/* 主聊天窗口样式调整 */
+.chat-main {
+  height: 100%;
+  width: 100%;
+}
+
+/* 添加好友按钮样式 */
+.add-friend-btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #ff85a2 0%, #ff6b95 100%);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  font-weight: 500;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 133, 162, 0.3);
+}
+
+.add-friend-btn:hover {
+  background: linear-gradient(135deg, #ff6b95 0%, #ff5288 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 133, 162, 0.4);
+}
+
+.add-friend-btn:active {
+  transform: translateY(0);
+}
+
+.add-icon {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.btn-text {
+  white-space: nowrap;
+  font-size: 12px;
 }
 
 .search-bar {
@@ -947,6 +1044,19 @@ export default {
   flex-direction: column;
   background-color: var(--chat-background);
   position: relative;
+}
+
+/* 非好友提示样式 */
+.non-friend-notice {
+  background-color: #fff3cd;
+  border-bottom: 1px solid #ffeaa7;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  color: #856404;
+  font-size: 14px;
 }
 
 /* 消息搜索区域 */

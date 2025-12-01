@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { messageApi } from '../services/api'
+import { messageApi, userApi } from '../services/api'
 import { useUserStore } from './user'
 
 export const useChatStore = defineStore('chat', {
@@ -67,41 +67,129 @@ export const useChatStore = defineStore('chat', {
       this.markAsRead(friendId)
     },
 
-    // 从API获取聊天伙伴列表
+    // 获取聊天伙伴列表（聊天过的用户和好友的并集）
     async fetchChatPartners() {
-      this.loading = true
-      this.clearError()
       try {
         const userStore = useUserStore()
-      const userId = userStore.userId || ''
-        const partners = await messageApi.getChatPartners(userId)
-        // 更新会话列表
-        this.updateConversationsFromPartners(partners)
-        return partners
+        const userId = userStore.userId || ''
+
+        // 从本地存储获取聊天过的用户ID列表
+        const chattedUsers = JSON.parse(localStorage.getItem('chattedUsers') || '[]')
+
+        // 从API获取好友列表
+        const friendsResponse = await friendApi.getFriendList()
+        this.friends = friendsResponse.data || []
+
+        // 提取好友ID列表
+        const friendIds = this.friends.map(friend => friend.id)
+
+        // 合并聊天用户和好友ID，使用Map确保每个ID只保留一个，并且优先标记为好友
+        const partnerMap = new Map()
+
+        // 首先添加聊天用户
+        chattedUsers.forEach(id => {
+          if (id !== userId) {
+            partnerMap.set(id, {
+              id,
+              isFriend: friendIds.includes(id)
+            })
+          }
+        })
+
+        // 然后添加好友（确保所有好友都被包含）
+        friendIds.forEach(id => {
+          if (id !== userId) {
+            partnerMap.set(id, {
+              id,
+              isFriend: true // 明确标记为好友
+            })
+          }
+        })
+
+        // 转换为数组
+        const filteredPartners = Array.from(partnerMap.keys())
+
+        // 为非好友用户获取完整信息
+        const userInfoMap = {}
+        for (const partnerId of filteredPartners) {
+          // 如果不是好友，调用API获取用户信息
+          if (!friendIds.includes(partnerId)) {
+            try {
+              const userInfoResponse = await userApi.getUserInfo(partnerId)
+              if (userInfoResponse && userInfoResponse.data) {
+                userInfoMap[partnerId] = userInfoResponse.data
+              }
+            } catch (err) {
+              console.log(`获取用户${partnerId}信息失败，使用默认信息`, err)
+            }
+          }
+        }
+
+        // 更新会话列表，传递用户信息映射
+        this.updateConversationsFromPartners(filteredPartners, userInfoMap)
+
+        return filteredPartners
       } catch (error) {
-        this.setError('获取聊天伙伴列表失败')
+        console.error('获取聊天伙伴失败:', error)
         return []
-      } finally {
-        this.loading = false
       }
     },
 
     // 根据伙伴列表更新会话
-    updateConversationsFromPartners(partners) {
+    updateConversationsFromPartners(partners, userInfoMap = {}) {
       if (!Array.isArray(partners)) return
 
       partners.forEach(partnerId => {
-        if (!this.conversations.find(c => c.id === partnerId)) {
+        // 查找现有会话
+        const existingConversation = this.conversations.find(c => c.id === partnerId)
+
+        // 从好友列表中查找用户信息
+        const friendInfo = this.friends.find(f => f.id === partnerId)
+        // 从用户信息映射中查找非好友用户信息
+        const userInfo = userInfoMap[partnerId]
+
+        // 优先使用好友信息，然后是非好友用户信息
+        const displayInfo = friendInfo || userInfo
+
+        if (existingConversation) {
+          // 如果会话已存在，更新信息（特别是好友状态）
+          existingConversation.name = displayInfo?.username || displayInfo?.name || `用户${partnerId}`
+          existingConversation.avatar = displayInfo?.avatar || ''
+          existingConversation.isFriend = !!friendInfo // 更新好友状态
+          existingConversation.unreadCount = this.unreadCount[partnerId] || 0
+        } else {
+          // 如果会话不存在，创建新会话
           this.conversations.push({
             id: partnerId,
-            name: `用户${partnerId}`,
-            avatar: '',
+            name: displayInfo?.username || displayInfo?.name || `用户${partnerId}`,
+            avatar: displayInfo?.avatar || '',
             lastMessage: '',
             lastMessageTime: new Date().toISOString(),
-            unreadCount: this.unreadCount[partnerId] || 0
+            unreadCount: this.unreadCount[partnerId] || 0,
+            isFriend: !!friendInfo // 标记是否为好友
           })
         }
       })
+
+      // 确保没有重复会话
+      this.removeDuplicateConversations()
+    },
+
+    // 移除重复的会话
+    removeDuplicateConversations() {
+      const uniqueIds = new Set()
+      const uniqueConversations = []
+
+      // 倒序遍历，保留最后出现的相同ID会话（通常包含最新信息）
+      for (let i = this.conversations.length - 1; i >= 0; i--) {
+        const conversation = this.conversations[i]
+        if (!uniqueIds.has(conversation.id)) {
+          uniqueIds.add(conversation.id)
+          uniqueConversations.unshift(conversation) // 保持原始顺序
+        }
+      }
+
+      this.conversations = uniqueConversations
     },
 
     // 从API获取完整聊天记录
@@ -243,21 +331,69 @@ export const useChatStore = defineStore('chat', {
         // 更新消息状态
         message.status = 'sent'
 
-        // 更新会话列表中的最后一条消息和时间
+        // 确保会话存在且信息正确
         const conversation = this.conversations.find(c => c.id === friendId)
+        const isFriendNow = !!this.friends.find(f => f.id === friendId)
+
         if (conversation) {
+          // 更新会话信息
           conversation.lastMessage = message.content
           conversation.lastMessageTime = message.createdAt
+
+          // 更新好友状态
+          if (conversation.isFriend !== isFriendNow) {
+            conversation.isFriend = isFriendNow
+            // 如果变成好友，获取完整用户信息
+            if (isFriendNow) {
+              const friendInfo = this.friends.find(f => f.id === friendId)
+              if (friendInfo) {
+                conversation.name = friendInfo.username || friendInfo.name || conversation.name
+                conversation.avatar = friendInfo.avatar || conversation.avatar
+              }
+            }
+          }
         } else {
-          // 如果会话不存在，创建新会话
-          this.conversations.push({
-            id: friendId,
-            name: this.friends.find(f => f.id === friendId)?.name || `用户${friendId}`,
-            avatar: this.friends.find(f => f.id === friendId)?.avatar || '',
-            lastMessage: message.content,
-            lastMessageTime: message.createdAt,
-            unreadCount: 0
-          })
+          // 如果会话不存在，检查是否为好友
+          const friendInfo = this.friends.find(f => f.id === friendId)
+
+          // 如果是好友，直接使用好友信息
+          if (friendInfo) {
+            this.conversations.push({
+              id: friendId,
+              name: friendInfo.username || friendInfo.name || `用户${friendId}`,
+              avatar: friendInfo.avatar || '',
+              lastMessage: message.content,
+              lastMessageTime: message.createdAt,
+              unreadCount: 0,
+              isFriend: true
+            })
+          } else {
+            // 如果不是好友，尝试获取用户信息
+            try {
+              const userInfo = await userApi.getUserInfo(friendId)
+              this.conversations.push({
+                id: friendId,
+                name: userInfo?.username || `用户${friendId}`,
+                avatar: userInfo?.avatar || '',
+                lastMessage: message.content,
+                lastMessageTime: message.createdAt,
+                unreadCount: 0,
+                isFriend: false
+              })
+            } catch (error) {
+              console.error('Failed to get user info:', error)
+              // 如果获取失败，使用默认信息
+              this.conversations.push({
+                id: friendId,
+                name: `用户${friendId}`,
+                avatar: '',
+                lastMessage: message.content,
+                lastMessageTime: message.createdAt,
+                unreadCount: 0,
+                isFriend: false
+              })
+            }
+          }
         }
       } catch (error) {
         this.setError('发送消息失败')
@@ -273,7 +409,9 @@ export const useChatStore = defineStore('chat', {
     },
 
     // 接收消息
-    receiveMessage(friendId, messageObj, fromApi = false) {
+    async receiveMessage(friendId, messageObj, fromApi = false) {
+      const userStore = useUserStore()
+
       // 支持传入完整消息对象
       let message;
       if (typeof messageObj === 'object') {
@@ -335,21 +473,69 @@ export const useChatStore = defineStore('chat', {
       // 按时间排序消息
       this.messages[friendId].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
-      // 更新会话列表中的最后一条消息
+      // 确保会话存在且信息正确
       const conversation = this.conversations.find(c => c.id === friendId)
+      const isFriendNow = !!this.friends.find(f => f.id === friendId)
+
       if (conversation) {
+        // 更新会话信息
         conversation.lastMessage = message.content
         conversation.lastMessageTime = message.createdAt
+
+        // 更新好友状态
+        if (conversation.isFriend !== isFriendNow) {
+          conversation.isFriend = isFriendNow
+          // 如果变成好友，获取完整用户信息
+          if (isFriendNow) {
+            const friendInfo = this.friends.find(f => f.id === friendId)
+            if (friendInfo) {
+              conversation.name = friendInfo.username || friendInfo.name || conversation.name
+              conversation.avatar = friendInfo.avatar || conversation.avatar
+            }
+          }
+        }
       } else {
-        // 创建新会话
-        this.conversations.push({
-          id: friendId,
-          name: this.friends.find(f => f.id === friendId)?.name || `用户${friendId}`,
-          avatar: this.friends.find(f => f.id === friendId)?.avatar || '',
-          lastMessage: message.content,
-          lastMessageTime: message.createdAt,
-          unreadCount: this.currentChat !== friendId && !message.isRead ? 1 : 0
-        })
+        // 如果会话不存在，检查是否为好友
+        const friendInfo = this.friends.find(f => f.id === friendId)
+
+        // 如果是好友，直接使用好友信息
+        if (friendInfo) {
+          this.conversations.push({
+            id: friendId,
+            name: friendInfo.username || friendInfo.name || `用户${friendId}`,
+            avatar: friendInfo.avatar || '',
+            lastMessage: message.content,
+            lastMessageTime: message.createdAt,
+            unreadCount: this.currentChat !== friendId && !message.isRead ? 1 : 0,
+            isFriend: true
+          })
+        } else {
+          // 如果不是好友，尝试获取用户信息
+          try {
+            const userInfo = await userApi.getUserInfo(friendId)
+            this.conversations.push({
+              id: friendId,
+              name: userInfo?.username || `用户${friendId}`,
+              avatar: userInfo?.avatar || '',
+              lastMessage: message.content,
+              lastMessageTime: message.createdAt,
+              unreadCount: this.currentChat !== friendId && !message.isRead ? 1 : 0,
+              isFriend: false
+            })
+          } catch (error) {
+            console.error('Failed to get user info:', error)
+            // 如果获取失败，使用默认信息
+            this.conversations.push({
+              id: friendId,
+              name: `用户${friendId}`,
+              avatar: '',
+              lastMessage: message.content,
+              lastMessageTime: message.createdAt,
+              unreadCount: this.currentChat !== friendId && !message.isRead ? 1 : 0,
+              isFriend: false
+            })
+          }
+        }
       }
 
       // 如果不是当前聊天且消息未读，增加未读数
