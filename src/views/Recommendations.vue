@@ -43,7 +43,7 @@
           @mouseleave="hideTooltip"
         >
           <div class="user-avatar">
-            <img :src="user.avatarPath || defaultAvatar" alt="用户头像">
+            <img :src="getUserAvatar(user.avatarPath, user.userId)" alt="用户头像">
           </div>
           <div class="user-info">
             <h3 class="username">{{ user.username }}</h3>
@@ -104,6 +104,7 @@ import { ref, computed, onMounted } from 'vue'
 // import { useRecommendStore } from '@/store/recommend'
 // import { useUserStore } from '@/store/user'
 import { recommendApi, friendApi } from '@/services/api'
+import { getUserAvatar, generateRandomAvatar } from '../utils/avatar';
 
 // 本地状态管理
 // const recommendStore = useRecommendStore()
@@ -132,8 +133,7 @@ const tooltipUser = ref(null)
 const tooltipStyle = ref({})
 const addingFriendId = ref(null)
 
-// 默认头像
-const defaultAvatar = '/avatar-placeholder.png'
+// 头像生成函数已从utils/avatar.js导入
 
 // API配置
 const recommendApis = [
@@ -453,8 +453,8 @@ async function sendFriendRequest(targetUserId, event) {
 
 // 生成模拟头像路径
 function generateAvatarPath(userId) {
-  // 这里使用随机头像服务，实际项目中应该使用真实的头像服务
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`
+  // 使用统一的头像生成工具
+  return getUserAvatar(null, userId)
 }
 
 // 生成模拟数据

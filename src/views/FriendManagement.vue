@@ -39,7 +39,7 @@
         >
           <div class="request-header">
             <img
-              :src="request.user.avatar || generateRandomAvatar(request.user.id)"
+              :src="getUserAvatar(request.user.avatar, request.user.id)"
               alt="User Avatar"
               class="request-avatar"
             />
@@ -96,7 +96,7 @@
         >
           <div class="friend-avatar-container">
             <img
-              :src="friend.avatar || generateRandomAvatar(friend.id)"
+              :src="getUserAvatar(friend.avatar, friend.id)"
               alt="Friend Avatar"
               class="friend-avatar"
             />
@@ -121,6 +121,7 @@
 <script>
 import { ref, onMounted } from 'vue';
 import { friendApi } from '../services/api';
+import { getUserAvatar, generateRandomAvatar } from '../utils/avatar';
 
 export default {
   name: 'FriendManagement',
@@ -164,7 +165,7 @@ export default {
         const requests = await friendApi.getFriendRequests(userId);
         // 打印API返回的数据结构以便调试
         console.log('API返回的好友申请数据:', requests);
-        
+
         let apiData = [];
         // 灵活处理不同格式的返回数据
         if (requests && typeof requests === 'object' && Array.isArray(requests.requests)) {
@@ -172,7 +173,7 @@ export default {
         } else if (Array.isArray(requests)) {
           apiData = requests;
         }
-        
+
         // 根据API返回的数据结构，将其转换为组件模板需要的格式
         friendRequests.value = apiData.map(userData => ({
           id: userData.userId,  // 使用userId作为请求的id
@@ -183,7 +184,7 @@ export default {
           },
           createdAt: userData.registerTime  // 使用registerTime作为创建时间
         }));
-        
+
         requestCount.value = friendRequests.value.length;
       } catch (err) {
         console.error('获取好友申请失败:', err);
@@ -203,7 +204,7 @@ export default {
         const friendList = await friendApi.getFriendList(userId);
         // 打印API返回的数据结构以便调试
         console.log('API返回的好友列表数据:', friendList);
-        
+
         let apiData = [];
         // 灵活处理不同格式的返回数据
         if (friendList && typeof friendList === 'object' && Array.isArray(friendList.friends)) {
@@ -211,7 +212,7 @@ export default {
         } else if (Array.isArray(friendList)) {
           apiData = friendList;
         }
-        
+
         // 根据API返回的数据结构，将其转换为组件模板需要的格式
         friends.value = apiData.map(userData => ({
           id: userData.userId,  // 使用userId作为好友的id
@@ -327,13 +328,7 @@ export default {
       return formatDate(lastSeen);
     };
 
-    // 生成随机头像
-    const generateRandomAvatar = (seed) => {
-      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-      const color = colors[parseInt(seed.toString().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0)) % colors.length];
-      const letter = seed.toString().charAt(0).toUpperCase();
-      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='${color}'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='40' text-anchor='middle' alignment-baseline='middle' fill='white'%3E${letter}%3C/text%3E%3C/svg%3E`;
-    };
+    // 头像生成函数已从utils/avatar.js导入
 
     onMounted(() => {
       fetchFriendRequests();
@@ -354,6 +349,7 @@ export default {
       deleteFriend,
       formatDate,
       formatLastSeen,
+      getUserAvatar,
       generateRandomAvatar
     };
   }
