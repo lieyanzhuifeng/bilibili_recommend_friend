@@ -210,7 +210,32 @@ export const useChatStore = defineStore('chat', {
             createdAt: msg.sendTime,
             isRead: msg.isRead
           }))
-          this.messages[friendId] = formattedMessages
+
+          // 获取本地临时消息
+          const tempMessages = this.messages[friendId] ?
+            this.messages[friendId].filter(msg => msg.isTemp && msg.status !== 'failed') : []
+
+          // 检查是否需要移除API返回的重复消息
+          let finalMessages = [...formattedMessages]
+          if (tempMessages.length > 0 && formattedMessages.length > 0) {
+            // 检查是否有临时消息与API最后一条消息重复
+            const lastApiMessage = formattedMessages[formattedMessages.length - 1]
+
+            const hasDuplicate = tempMessages.some(tempMsg =>
+              tempMsg.content === lastApiMessage.content &&
+              Math.abs(new Date(tempMsg.createdAt) - new Date(lastApiMessage.createdAt)) < 5000 &&
+              tempMsg.senderId === lastApiMessage.senderId &&
+              tempMsg.receiverId === lastApiMessage.receiverId
+            )
+
+            if (hasDuplicate) {
+              finalMessages = formattedMessages.slice(0, -1)
+            }
+          }
+
+          // 合并临时消息和API消息
+          this.messages[friendId] = [...finalMessages, ...tempMessages]
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
         }
         return messages
       } catch (error) {
@@ -222,13 +247,14 @@ export const useChatStore = defineStore('chat', {
     },
 
     // 从API获取最近聊天记录
-    async fetchRecentChat(friendId, limit = 50) {
+    async fetchRecentChat(friendId, limit = 50, lastMessageTime = 0) {
       this.loading = true
       this.clearError()
       try {
         const userStore = useUserStore()
       const userId = userStore.userId
-        const messages = await messageApi.getRecentChat(userId, friendId, limit)
+        // 传入lastMessageTime参数，只获取最新消息
+        const messages = await messageApi.getRecentChat(userId, friendId, limit, lastMessageTime)
         if (Array.isArray(messages)) {
           const formattedMessages = messages.map(msg => ({
             id: msg.messageId,
@@ -242,11 +268,81 @@ export const useChatStore = defineStore('chat', {
           if (!this.messages[friendId]) {
             this.messages[friendId] = []
           }
-          // 去重并合并
-          const existingIds = new Set(this.messages[friendId].map(m => m.id))
-          const newMessages = formattedMessages.filter(m => !existingIds.has(m.id))
-          this.messages[friendId] = [...this.messages[friendId], ...newMessages]
-            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+
+          // 获取本地临时消息
+          const tempMessages = this.messages[friendId].filter(msg => msg.isTemp)
+
+          // 检查是否需要移除API返回的重复消息
+          let filteredMessages = [...formattedMessages]
+          if (tempMessages.length > 0 && formattedMessages.length > 0) {
+            // 只检查最近的临时消息和API返回的最后一条消息
+            const lastApiMessage = formattedMessages[formattedMessages.length - 1]
+
+            // 检查是否有临时消息与API最后一条消息重复
+            const hasDuplicate = tempMessages.some(tempMsg =>
+              // 比较内容、时间（近似）、发送者和接收者
+              tempMsg.content === lastApiMessage.content &&
+              Math.abs(new Date(tempMsg.createdAt) - new Date(lastApiMessage.createdAt)) < 5000 && // 5秒内视为同一时间
+              tempMsg.senderId === lastApiMessage.senderId &&
+              tempMsg.receiverId === lastApiMessage.receiverId
+            )
+
+            // 如果有重复，移除API返回的最后一条消息
+            if (hasDuplicate) {
+              filteredMessages = formattedMessages.slice(0, -1)
+            }
+          }
+
+          // 去重并合并 - 改进版：不仅通过ID去重，还通过内容和时间戳去重，防止临时消息转正后重复
+          // 同时删除已被服务器确认的临时消息
+          const existingMessages = [...this.messages[friendId]]
+          const newMessages = []
+          const tempMessagesToRemove = []
+
+          // 首先，收集所有已被服务器确认的临时消息（通过isServerConfirmed标志）
+          existingMessages.forEach((msg, index) => {
+            if (msg.isTemp && msg.isServerConfirmed) {
+              tempMessagesToRemove.push(index)
+            }
+          })
+
+          // 遍历API返回的消息，检查是否为真正的新消息
+          for (const apiMsg of filteredMessages) {
+            // 检查是否已存在相同ID的消息
+            const idExists = existingMessages.some(m => m.id === apiMsg.id)
+
+            // 检查是否存在内容、发送者、接收者相同且时间相近的消息（处理临时消息转正情况）
+            const contentExists = existingMessages.some((m, index) => {
+              if (m.content === apiMsg.content &&
+                  m.senderId === apiMsg.senderId &&
+                  m.receiverId === apiMsg.receiverId &&
+                  Math.abs(new Date(m.createdAt) - new Date(apiMsg.createdAt)) < 5000) {
+                // 如果是临时消息，标记为需要删除
+                if (m.isTemp) {
+                  tempMessagesToRemove.push(index)
+                }
+                return true
+              }
+              return false
+            })
+
+            // 只有当消息完全新时才添加
+            if (!idExists && !contentExists) {
+              newMessages.push(apiMsg)
+              existingMessages.push(apiMsg)
+            }
+          }
+
+          // 删除已被服务器确认的临时消息
+          // 从后往前删除，避免索引变化问题
+          // 使用Set确保每个索引只删除一次
+          const uniqueIndexes = Array.from(new Set(tempMessagesToRemove)).sort((a, b) => b - a)
+          for (let i = 0; i < uniqueIndexes.length; i++) {
+            existingMessages.splice(uniqueIndexes[i], 1)
+          }
+
+          // 更新消息列表并排序
+          this.messages[friendId] = existingMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
         }
         return messages
       } catch (error) {
@@ -316,7 +412,8 @@ export const useChatStore = defineStore('chat', {
         senderId: userId,
         receiverId: friendId,
         createdAt: new Date().toISOString(),
-        status: 'sending'
+        status: 'sending',
+        isTemp: true // 标记为临时消息
       }
 
       // 先添加到本地（乐观更新）
@@ -328,8 +425,9 @@ export const useChatStore = defineStore('chat', {
       try {
         // 调用API发送消息
         await messageApi.sendMessage(userId, friendId, messageContent)
-        // 更新消息状态
+        // 更新消息状态，但保留临时标记以便在下一轮刷新中删除
         message.status = 'sent'
+        message.isServerConfirmed = true // 标记为已被服务器确认
 
         // 确保会话存在且信息正确
         const conversation = this.conversations.find(c => c.id === friendId)
@@ -397,7 +495,9 @@ export const useChatStore = defineStore('chat', {
         }
       } catch (error) {
         this.setError('发送消息失败')
+        // 只在发送失败时设置failed状态并保留临时标记
         message.status = 'failed'
+        // 保持isTemp为true，用于在UI中显示失败标志
       } finally {
         this.loading = false
       }

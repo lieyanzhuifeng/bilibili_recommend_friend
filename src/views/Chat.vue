@@ -79,7 +79,7 @@
           </div>
         </div>
 
-    
+
 
     <!-- 聊天消息区域 -->
     <div class="chat-messages" ref="messagesContainer">
@@ -101,8 +101,8 @@
               </div>
               <div class="message-meta">
                 <span class="message-time">{{ formatTime(message.createdAt) }}</span>
-                <span v-if="isMyMessage(message)" class="message-status" :title="getStatusTitle(message.status)">
-                  {{ getStatusIcon(message.status) }}
+                <span v-if="isMyMessage(message)" class="message-status" :title="getStatusTitle(message.status, message.isTemp)">
+                  {{ getStatusIcon(message.status, message.isTemp) }}
                 </span>
                 <!-- <span v-if="!isMyMessage(message) && !message.isRead" class="unread-indicator">未读</span> -->
               </div>
@@ -391,14 +391,16 @@ export default {
       return message.senderId === userStore.userId
     }
 
-    const getStatusIcon = (status) => {
+    const getStatusIcon = (status, isTemp = false) => {
       switch (status) {
         case 'sending':
           return '⏱️'
         case 'sent':
-          return '✓'
+          // 临时消息发送成功后显示特殊标记
+          return isTemp ? '✓ (临时)' : '✓'
         case 'failed':
-          return '❌'
+          // 失败的临时消息显示更明显的失败标记
+          return isTemp ? '❌ (重试)' : '❌'
         case 'received':
           return '✓✓'
         default:
@@ -406,14 +408,14 @@ export default {
       }
     }
 
-    const getStatusTitle = (status) => {
+    const getStatusTitle = (status, isTemp = false) => {
       switch (status) {
         case 'sending':
           return '发送中'
         case 'sent':
-          return '已发送'
+          return isTemp ? '已发送 (临时)' : '已发送'
         case 'failed':
-          return '发送失败'
+          return isTemp ? '发送失败 (点击重试)' : '发送失败'
         case 'received':
           return '已送达'
         default:
@@ -436,33 +438,16 @@ export default {
       showSendingIndicator.value = true
 
       try {
-        // 创建临时消息ID，避免重复显示
-        const tempMessageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-        // 创建本地消息对象
-        const localMessage = {
-          id: tempMessageId,
-          content,
-          createdAt: new Date().toISOString(),
-          senderId: 'current-user', // 假设当前用户ID标识
-          status: 'sending'
-        }
-
-        // 如果store支持添加临时消息，则添加到本地消息列表
-        if (chatStore.addLocalMessage) {
-          chatStore.addLocalMessage(currentChatId.value, localMessage)
-        }
-
         // 清空输入框
         messageInput.value = ''
+
+        // 调用store的发送消息方法，由store负责创建临时消息并添加到状态中
+        await chatStore.sendMessage(currentChatId.value, content)
 
         // 滚动到底部
         nextTick(() => {
           scrollToBottom()
         })
-
-        // 调用store的发送消息方法
-        await chatStore.sendMessage(currentChatId.value, content)
 
         // 注意：不再手动刷新消息列表，避免重复显示
         // 让store负责更新消息状态，而不是重新获取整个列表
@@ -655,7 +640,14 @@ export default {
 
         // 如果有当前聊天，检查是否有新消息
         if (currentChatId.value) {
-          await chatStore.fetchRecentChat(currentChatId.value)
+          // 记录获取前的最新消息时间戳
+          const currentMessages = chatStore.getCurrentConversation || []
+          const lastMessageTime = currentMessages.length > 0
+            ? new Date(currentMessages[currentMessages.length - 1].createdAt).getTime()
+            : 0
+
+          // 调用fetchRecentChat时传入最后一条消息的时间戳，让服务器只返回新消息
+          await chatStore.fetchRecentChat(currentChatId.value, 50, lastMessageTime)
         }
       } catch (error) {
         console.error('检查新消息失败:', error)
