@@ -138,4 +138,25 @@ public class ThemeRecommendationService implements RecommendationService {
         public double getScore() { return score; }
         public List<String> getCommonThemeNames() { return commonThemeNames; }
     }
+
+    public Map<String, Double> show(Long userId) {
+        // 获取用户的主题偏好
+        List<UserTopTheme> userThemes = userTopThemeRepository.findTop3ByUserId(userId);
+
+        if (userThemes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Double> distribution = new LinkedHashMap<>();
+
+        for (UserTopTheme theme : userThemes) {
+            String themeName = getThemeName(theme.getThemeId());
+            // 将BigDecimal转换为Double百分比
+            Double percentage = theme.getProportion().doubleValue() * 100;
+            distribution.put(themeName, percentage);
+        }
+
+        return distribution;
+    }
+
 }

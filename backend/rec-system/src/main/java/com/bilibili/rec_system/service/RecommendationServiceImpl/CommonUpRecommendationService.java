@@ -107,4 +107,30 @@ public class CommonUpRecommendationService implements RecommendationService {
                 })
                 .collect(Collectors.toList());
     }
+
+    public List<Map<String, Object>> show(Long userId) {
+        // 获取用户关注的所有UP主ID
+        List<Long> upIds = userFollowUpRepository.findUpIdsByUserId(userId);
+
+        if (upIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Map<String, Object>> upList = new ArrayList<>();
+
+        for (Long upId : upIds) {
+            User up = userRepository.findByUserId(upId);
+            if (up != null) {
+                Map<String, Object> upInfo = new HashMap<>();
+                upInfo.put("upId", up.getUserId());
+                upInfo.put("username", up.getUsername());
+                upInfo.put("avatarPath", up.getAvatarPath());
+                upInfo.put("registerTime", up.getRegisterTime());
+                upList.add(upInfo);
+            }
+        }
+
+        return upList;
+    }
+
 }

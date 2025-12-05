@@ -140,4 +140,26 @@ public class CategoryRecommendationService implements RecommendationService {
         public double getScore() { return score; }
         public List<String> getCommonCategoryNames() { return commonCategoryNames; }
     }
+
+    //提供用户画像的组件
+    public Map<String, Double> show(Long userId) {
+        // 获取用户的分区偏好
+        List<UserTopCategory> userCategories = userTopCategoryRepository.findTop3ByUserId(userId);
+
+        if (userCategories.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Double> distribution = new LinkedHashMap<>();
+
+        for (UserTopCategory category : userCategories) {
+            String categoryName = getCategoryName(category.getCategoryId());
+            // 将BigDecimal转换为Double百分比（假设proportion是0-1的小数）
+            Double percentage = category.getProportion().doubleValue() * 100;
+            distribution.put(categoryName, percentage);
+        }
+
+        return distribution;
+    }
+
 }
