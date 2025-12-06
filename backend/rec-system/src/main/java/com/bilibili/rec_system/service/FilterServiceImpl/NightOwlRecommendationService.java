@@ -79,7 +79,7 @@ public class NightOwlRecommendationService implements FilterService {
     /**
      * 计算夜猫子等级
      */
-    private String calculateOwlLevel(UserStatistics stats) {
+    public String calculateOwlLevel(UserStatistics stats) {
         int watchHours = stats.getNightWatchMinutes() / 60;
         int activeDays = stats.getNightWatchDays();
 
