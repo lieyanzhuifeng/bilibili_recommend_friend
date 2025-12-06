@@ -5,6 +5,7 @@ import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.entity.Video;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class FriendRecommendationDTO implements Serializable {
     private Comment userComment;        // 用户自己的评论（新增）
@@ -84,23 +85,21 @@ public class FriendRecommendationDTO implements Serializable {
         FriendRecommendationDTO that = (FriendRecommendationDTO) o;
 
         if (Double.compare(that.matchScore, matchScore) != 0) return false;
-        if (userComment != null ? !userComment.equals(that.userComment) : that.userComment != null) return false;
-        if (matchedComment != null ? !matchedComment.equals(that.matchedComment) : that.matchedComment != null)
+        if (!Objects.equals(userComment, that.userComment)) return false;
+        if (!Objects.equals(matchedComment, that.matchedComment))
             return false;
-        if (video != null ? !video.equals(that.video) : that.video != null) return false;
-        return recommendedUser != null ? recommendedUser.equals(that.recommendedUser) : that.recommendedUser == null;
+        if (!Objects.equals(video, that.video)) return false;
+        return Objects.equals(recommendedUser, that.recommendedUser);
     }
 
     @Override
     public int hashCode() {
         int result;
-        long temp;
         result = userComment != null ? userComment.hashCode() : 0;
         result = 31 * result + (matchedComment != null ? matchedComment.hashCode() : 0);
         result = 31 * result + (video != null ? video.hashCode() : 0);
         result = 31 * result + (recommendedUser != null ? recommendedUser.hashCode() : 0);
-        temp = Double.doubleToLongBits(matchScore);
-        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + Double.hashCode(matchScore);
         return result;
     }
 }
