@@ -24,6 +24,8 @@ public class RecommendationServiceFactory {
     private CommonUpRecommendationService commonUpRecommendationService;
     @Autowired
     private FavoriteSimilarityService favoriteSimilarityService;
+    @Autowired
+    private CommentBasedFriendRecommendationServiceAdapter commentFriendAdapter;
     public RecommendationService getRecommendationService(String type) {
         return (RecommendationService) switch (type) {
             case "reply" -> replyRecommendationService;
@@ -34,6 +36,7 @@ public class RecommendationServiceFactory {
             case "user_behavior" -> userBehaviorRecommendationService;
             case "common_up" -> commonUpRecommendationService;
             case "favorite_similarity" -> favoriteSimilarityService;
+            case "comment_friends" -> commentFriendAdapter;
             default -> throw new IllegalArgumentException("不支持的推荐类型: " + type);
         };
     }

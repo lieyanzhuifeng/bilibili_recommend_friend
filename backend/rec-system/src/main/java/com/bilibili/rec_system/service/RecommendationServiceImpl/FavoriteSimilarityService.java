@@ -2,6 +2,7 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.FavoriteSimilarityDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.repository.*;
 import com.bilibili.rec_system.service.RecommendationService;

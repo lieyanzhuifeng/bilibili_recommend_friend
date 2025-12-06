@@ -289,4 +289,23 @@ public class ChainController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 通过评论推荐好友 + 责任链筛选
+     */
+    @GetMapping("/comment-friends/{userId}")
+    public List<FriendRecommendationDTO> recommendFriendsByComments(
+            @PathVariable Long userId,
+            @RequestParam(required = false, defaultValue = "0") Integer activity,
+            @RequestParam(required = false, defaultValue = "0") Integer nightOwl) {
+
+        // 注意：这个服务可能不是通过工厂获取的，需要特殊处理
+        // 这里假设它实现了RecommendationService接口
+        Request request = new Request("comment_friends", userId, null, activity, nightOwl);
+        List<BaseDTO> results = chainService.executeFullChain(request);
+
+        return results.stream()
+                .map(dto -> (FriendRecommendationDTO) dto)
+                .collect(Collectors.toList());
+    }
+
 }

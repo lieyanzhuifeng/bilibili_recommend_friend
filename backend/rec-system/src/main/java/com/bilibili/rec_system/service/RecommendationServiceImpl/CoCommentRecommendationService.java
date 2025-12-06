@@ -3,6 +3,7 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.CoCommentRecommendationDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.repository.CommentRepository;
 import com.bilibili.rec_system.repository.UserRepository;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CoCommentRecommendationService implements RecommendationService {

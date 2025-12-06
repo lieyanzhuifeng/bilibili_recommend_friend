@@ -2,17 +2,16 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.CategoryRecommendationDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.entity.UserTopCategory;
 import com.bilibili.rec_system.repository.UserRepository;
 import com.bilibili.rec_system.repository.UserTopCategoryRepository;
-import com.bilibili.rec_system.repository.UserTopThemeRepository;
 import com.bilibili.rec_system.repository.VideoCategoryRepository;
 import com.bilibili.rec_system.service.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 

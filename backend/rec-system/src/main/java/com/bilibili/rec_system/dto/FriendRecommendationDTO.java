@@ -7,7 +7,7 @@ import com.bilibili.rec_system.entity.Video;
 import java.io.Serializable;
 import java.util.Objects;
 
-public class FriendRecommendationDTO implements Serializable {
+public class FriendRecommendationDTO extends BaseDTO implements Serializable {
     private Comment userComment;        // 用户自己的评论（新增）
     private Comment matchedComment;     // 匹配到的其他用户评论
     private Video video;                // 相关视频
