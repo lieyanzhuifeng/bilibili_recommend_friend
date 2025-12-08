@@ -15,7 +15,7 @@
     <div class="chat-header-bar">
       <div class="chat-contact-info">
         <div class="contact-avatar">
-          <img :src="currentChat.avatar" alt="头像" />
+          <img :src="getUserAvatar(currentChat.avatar, currentChat.id)" alt="头像" />
           <span v-if="currentChat.isOnline" class="online-indicator"></span>
         </div>
         <div class="contact-details">
@@ -194,7 +194,7 @@
     <!-- 对方正在输入提示 -->
     <div v-if="isTyping" class="typing-indicator">
       <div class="typing-avatar">
-        <img :src="currentChat?.avatar" alt="头像" />
+        <img :src="getUserAvatar(currentChat?.avatar, currentChat?.id)" alt="头像" />
       </div>
       <div class="typing-bubble">
         <div class="typing-dots">
@@ -224,6 +224,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useUserStore } from '../stores/user'
+import { getUserAvatar, generateRandomAvatar } from '../utils/avatar'
 import Button from '../components/Button.vue'
 
 export default {
@@ -654,12 +655,7 @@ export default {
       }
     }
 
-    // 生成随机头像
-    const generateRandomAvatar = (name) => {
-      // 使用用户名生成种子，确保同一个用户总是得到相同的头像
-      const seed = name ? name.toLowerCase().replace(/\s+/g, '-') : 'default'
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
-    }
+    // 头像生成函数已从utils/avatar.js导入
 
     // 监听输入
     watch(messageInput, () => {
@@ -710,7 +706,7 @@ export default {
             conversation = {
               id: userId,
               name: userName || `用户${userId}`,
-              avatar: generateRandomAvatar(userId.toString()),
+              avatar: getUserAvatar(null, userId.toString()),
               isOnline: false,
               isFriend: true, // 从好友页面过来的都默认为好友
               lastMessage: '',
@@ -794,6 +790,7 @@ export default {
       showSendingIndicator,
       isTyping,
       showMoreOptions,
+      getUserAvatar,
       showMessageSearch,
       showErrorModal,
       errorMessage,

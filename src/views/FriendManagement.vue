@@ -165,7 +165,7 @@ export default {
         const requests = await friendApi.getFriendRequests(userId);
         // 打印API返回的数据结构以便调试
         console.log('API返回的好友申请数据:', requests);
-
+        
         let apiData = [];
         // 灵活处理不同格式的返回数据
         if (requests && typeof requests === 'object' && Array.isArray(requests.requests)) {
@@ -173,7 +173,7 @@ export default {
         } else if (Array.isArray(requests)) {
           apiData = requests;
         }
-
+        
         // 根据API返回的数据结构，将其转换为组件模板需要的格式
         friendRequests.value = apiData.map(userData => ({
           id: userData.userId,  // 使用userId作为请求的id
@@ -184,7 +184,7 @@ export default {
           },
           createdAt: userData.registerTime  // 使用registerTime作为创建时间
         }));
-
+        
         requestCount.value = friendRequests.value.length;
       } catch (err) {
         console.error('获取好友申请失败:', err);
@@ -204,7 +204,7 @@ export default {
         const friendList = await friendApi.getFriendList(userId);
         // 打印API返回的数据结构以便调试
         console.log('API返回的好友列表数据:', friendList);
-
+        
         let apiData = [];
         // 灵活处理不同格式的返回数据
         if (friendList && typeof friendList === 'object' && Array.isArray(friendList.friends)) {
@@ -212,7 +212,7 @@ export default {
         } else if (Array.isArray(friendList)) {
           apiData = friendList;
         }
-
+        
         // 根据API返回的数据结构，将其转换为组件模板需要的格式
         friends.value = apiData.map(userData => ({
           id: userData.userId,  // 使用userId作为好友的id

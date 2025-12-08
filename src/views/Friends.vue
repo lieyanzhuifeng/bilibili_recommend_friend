@@ -178,6 +178,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { friendApi, userApi } from '../services/api'
+import { getUserAvatar, generateRandomAvatar } from '../utils/avatar'
 import Card from '../components/Card.vue'
 import Button from '../components/Button.vue'
 
@@ -459,12 +460,7 @@ export default {
       )
     }
 
-    // 生成随机头像
-    const generateRandomAvatar = (name) => {
-      // 使用用户名生成种子，确保同一个用户总是得到相同的头像
-      const seed = name ? name.toLowerCase().replace(/\s+/g, '-') : 'default'
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
-    }
+    // 头像生成函数已从utils/avatar.js导入
 
     // 获取好友列表
     const fetchFriends = async () => {
@@ -524,7 +520,7 @@ export default {
                 // 确保用户名存在
                 username: friend.username || friend.name || `用户${friend.id || friend.userId || index}`,
                 // 确保头像存在
-                avatar: friend.avatar || friend.avatarPath || friend.avatar_url || generateRandomAvatar(friend.username || friend.name || friend.id || friend.userId || String(index)),
+                avatar: getUserAvatar(friend.avatar || friend.avatarPath || friend.avatar_url, friend.id || friend.userId || index || friend.username || friend.name) || generateRandomAvatar(friend.username || friend.name || friend.id || friend.userId || String(index)),
                 // 确保状态字段存在，默认为离线
                 status: friend.status === 'online' ? 'online' : 'offline',
                 // 将registerTime映射为lastSeen，用于显示最后在线时间
@@ -625,6 +621,7 @@ export default {
       getEmptyStateMessage,
       formatLastSeen,
       formatDate,
+      getUserAvatar,
       generateRandomAvatar,
       testChat
   }

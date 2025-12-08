@@ -27,7 +27,7 @@ export function getUserAvatar(avatarPath, userId) {
   if (avatarPath && avatarPath.trim() !== '') {
     return avatarPath;
   }
-
+  
   // 否则生成默认头像
   return generateRandomAvatar(userId);
 }
