@@ -276,7 +276,13 @@ export const filterApi = {
   followTime: ({ userId, upId } = {}) => get('/api/filter/follow-time', { userId, upId }),
   nightOwl: ({ option } = {}) => get('/api/filter/night-owl', { option }),
   userActivity: ({ option } = {}) => get('/api/filter/user-activity', { option }),
-  series: ({ tagId } = {}) => get('/api/filter/series', { tagId })
+  series: ({ tagId } = {}) => get('/api/filter/series', { tagId }),
+
+  // 责任链相关API（按照API2.md文档）
+  chainSameUpVideoCount: (body, params = {}) => post(`/api/chain/same-up-video-count${buildQuery(params)}`, body),
+  chainSameTagVideoCount: ({ tagId, ratioOption, ...params } = {}) => get('/api/chain/same-tag-video-count', { tagId, ratioOption, ...params }),
+  chainDeepVideo: ({ videoId, option, ...params } = {}) => get('/api/chain/deep-video', { videoId, option, ...params }),
+  chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params })
 }
 
 // 登录相关API

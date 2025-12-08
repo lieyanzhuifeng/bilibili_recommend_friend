@@ -31,6 +31,7 @@
   }
 ]
 ```
+显示：你和username都在videotitle下评论过，认识一下叭。
 
 ### 2. 评论回复推荐
 
@@ -53,6 +54,7 @@
   }
 ]
 ```
+显示：username曾经回复过你的评论，认识一下叭。
 
 ### 3. 共同分享视频推荐
 
@@ -75,6 +77,7 @@
   }
 ]
 ```
+显示：你与username观看过的视频的相似度为similarityRate%，认识一下叭。
 
 ### 4. 分类偏好推荐
 
@@ -120,51 +123,7 @@
 ]
 ```
 
-### 6. 用户行为推荐
-
-**请求路径**: `GET /api/recommend/user-behavior/{userId}`
-
-**功能**: 基于整体用户行为模式推荐用户
-
-**参数**:
-- `userId`: 用户ID (路径参数)
-
-**响应**: 
-```json
-[
-  {
-    "userId": 123,
-    "username": "用户名",
-    "avatar": "头像URL",
-    "behaviorScore": 0.92,
-    "activityLevel": "活跃"
-  }
-]
-```
-
-### 7. 共同关注UP主推荐
-
-**请求路径**: `GET /api/recommend/common-up/{userId}`
-
-**功能**: 基于共同关注的UP主推荐用户
-
-**参数**:
-- `userId`: 用户ID (路径参数)
-
-**响应**: 
-```json
-[
-  {
-    "userId": 123,
-    "username": "用户名",
-    "avatar": "头像URL",
-    "commonUpCount": 8,
-    "similarityScore": 0.79
-  }
-]
-```
-
-### 8. 收藏相似度推荐
+### 6. 收藏相似度推荐
 
 **请求路径**: `GET /api/recommend/favorite-similarity/{userId}`
 
@@ -186,7 +145,7 @@
 ]
 ```
 
-### 9. 评论好友推荐
+### 7. 评论好友推荐
 
 **请求路径**: `GET /api/recommend/comment-friends/{userId}`
 
@@ -210,30 +169,7 @@
 
 ## 筛选相关API
 
-### 1. 同一UP主筛选推荐
-
-**请求路径**: `GET /api/filter/same-up`
-
-**功能**: 筛选关注同一UP主的用户
-
-**参数**:
-- `upId`: UP主ID (必填)
-- `durationOption`: 关注时长选项 (可选，默认-1)
-
-**响应**: 
-```json
-[
-  {
-    "userId": 123,
-    "username": "用户名",
-    "avatar": "头像URL",
-    "followDate": "2023-01-01T12:00:00",
-    "interactionScore": 0.85
-  }
-]
-```
-
-### 2. 同一标签筛选
+### 1. 同一标签筛选
 
 **请求路径**: `GET /api/filter/same-tag`
 
@@ -256,7 +192,7 @@
 ]
 ```
 
-### 3. UP主视频观看比例筛选
+### 2. UP主视频观看比例筛选
 
 **请求路径**: `POST /api/filter/same-up-video-count`
 
@@ -278,7 +214,7 @@
 ]
 ```
 
-### 4. 标签视频观看比例筛选
+### 3. 标签视频观看比例筛选
 
 **请求路径**: `GET /api/filter/same-tag-video-count`
 
@@ -301,30 +237,7 @@
 ]
 ```
 
-### 5. 关注时间缘分推荐
-
-**请求路径**: `GET /api/filter/follow-time`
-
-**功能**: 基于关注同一UP主的时间接近度推荐用户
-
-**参数**:
-- `userId`: 用户ID (必填)
-- `upId`: UP主ID (必填)
-
-**响应**: 
-```json
-[
-  {
-    "userId": 123,
-    "username": "用户名",
-    "avatar": "头像URL",
-    "followDate": "2023-01-01T12:00:00",
-    "timeProximity": 86400000
-  }
-]
-```
-
-### 6. 夜猫子用户筛选
+### 4. 夜猫子用户筛选
 
 **请求路径**: `GET /api/filter/night-owl`
 
@@ -346,29 +259,7 @@
 ]
 ```
 
-### 7. 用户活跃度筛选
-
-**请求路径**: `GET /api/filter/user-activity`
-
-**功能**: 根据用户活跃度筛选
-
-**参数**:
-- `option`: 活跃度选项 (必填)
-
-**响应**: 
-```json
-[
-  {
-    "userId": 123,
-    "username": "用户名",
-    "avatar": "头像URL",
-    "activityScore": 0.95,
-    "lastActiveTime": "2023-01-01T12:00:00"
-  }
-]
-```
-
-### 8. 深度视频筛选
+### 5. 深度视频筛选
 
 **请求路径**: `GET /api/filter/deep-video`
 
@@ -391,7 +282,7 @@
 ]
 ```
 
-### 9. 系列作品筛选
+### 6. 系列作品筛选
 
 **请求路径**: `GET /api/filter/series`
 
@@ -399,6 +290,106 @@
 
 **参数**:
 - `tagId`: 标签ID (必填)
+
+**响应**: 
+```json
+[
+  {
+    "userId": 123,
+    "username": "用户名",
+    "avatar": "头像URL",
+    "seriesWatchCount": 25,
+    "completionRate": 0.85
+  }
+]
+```
+
+## 责任链相关API
+
+### 1. UP主视频观看比例筛选 + 责任链筛选
+
+**请求路径**: `POST /api/chain/same-up-video-count`
+
+**功能**: 先根据UP主视频观看比例筛选用户，再通过责任链进行二次筛选
+
+**参数**:
+- 请求体: `{"upId": 123, "ratioOption": 1}`
+- `activity`: 活跃度筛选选项 (可选，默认0)
+- `nightOwl`: 夜猫子筛选选项 (可选，默认0)
+
+**响应**: 
+```json
+[
+  {
+    "userId": 123,
+    "username": "用户名",
+    "avatar": "头像URL",
+    "videoWatchCount": 25,
+    "watchRatio": 0.65
+  }
+]
+```
+
+### 2. 标签视频观看比例筛选 + 责任链筛选
+
+**请求路径**: `GET /api/chain/same-tag-video-count`
+
+**功能**: 先根据标签视频观看比例筛选用户，再通过责任链进行二次筛选
+
+**参数**:
+- `tagId`: 标签ID (必填)
+- `ratioOption`: 比例选项 (必填)
+- `activity`: 活跃度筛选选项 (可选，默认0)
+- `nightOwl`: 夜猫子筛选选项 (可选，默认0)
+
+**响应**: 
+```json
+[
+  {
+    "userId": 123,
+    "username": "用户名",
+    "avatar": "头像URL",
+    "tagVideoCount": 30,
+    "watchRatio": 0.72
+  }
+]
+```
+
+### 3. 深度视频筛选 + 责任链筛选
+
+**请求路径**: `GET /api/chain/deep-video`
+
+**功能**: 先根据视频观看深度筛选用户，再通过责任链进行二次筛选
+
+**参数**:
+- `videoId`: 视频ID (必填)
+- `option`: 筛选选项 (必填)
+- `activity`: 活跃度筛选选项 (可选，默认0)
+- `nightOwl`: 夜猫子筛选选项 (可选，默认0)
+
+**响应**: 
+```json
+[
+  {
+    "userId": 123,
+    "username": "用户名",
+    "avatar": "头像URL",
+    "watchCompletionRate": 0.92,
+    "watchTime": 1200
+  }
+]
+```
+
+### 4. 系列作品筛选 + 责任链筛选
+
+**请求路径**: `GET /api/chain/series`
+
+**功能**: 先根据系列作品兴趣筛选用户，再通过责任链进行二次筛选
+
+**参数**:
+- `tagId`: 标签ID (必填)
+- `activity`: 活跃度筛选选项 (可选，默认0)
+- `nightOwl`: 夜猫子筛选选项 (可选，默认0)
 
 **响应**: 
 ```json
