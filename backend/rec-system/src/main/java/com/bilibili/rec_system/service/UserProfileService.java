@@ -1,5 +1,6 @@
 package com.bilibili.rec_system.service;
 
+import com.bilibili.rec_system.service.FilterServiceImpl.DeepVideoFilterService;
 import com.bilibili.rec_system.service.RecommendationServiceImpl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class UserProfileService {
     @Autowired
     private CommonUpRecommendationService commonUpRecommendationService;
 
+    // 新增：注入 DeepVideoFilterService
+    @Autowired
+    private DeepVideoFilterService deepVideoFilterService;
+
     public Map<String, Object> show(Long userId) {
         Map<String, Object> profile = new LinkedHashMap<>();
 
@@ -48,6 +53,10 @@ public class UserProfileService {
         // 5. 关注up主
         List<Map<String, Object>> followedUps = commonUpRecommendationService.show(userId);
         profile.put("followedUps", commonUpRecommendationService.show(userId));
+
+        // 6. 新增：调用 DeepVideoFilterService 获取深度观看视频
+        profile.put("deepWatchedVideos", deepVideoFilterService.show(userId));
+
         return profile;
     }
 }
