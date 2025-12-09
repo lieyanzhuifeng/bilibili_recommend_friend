@@ -3,6 +3,7 @@ package com.bilibili.rec_system.service;
 import com.bilibili.rec_system.entity.Message;
 import com.bilibili.rec_system.repository.MessageRepository;
 import com.bilibili.rec_system.service.MessageService;
+import com.bilibili.rec_system.service.network.NetworkMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,25 +18,71 @@ public class MessageServiceImpl implements MessageService {
 
     @Autowired
     private MessageRepository messageRepository;
+    
+    @Autowired
+    private NetworkMessageService networkMessageService;
 
     @Override
     public boolean sendMessage(Long senderId, Long receiverId, String content) {
         try {
+            // 参数验证
             if (senderId == null || receiverId == null || content == null || content.trim().isEmpty()) {
+                System.err.println("发送消息参数无效: senderId=" + senderId + ", receiverId=" + receiverId);
                 return false;
             }
 
+            // 创建消息对象
             Message message = new Message();
             message.setSenderId(senderId);
             message.setReceiverId(receiverId);
             message.setContent(content.trim());
             message.setSendTime(LocalDateTime.now());
 
-            messageRepository.save(message);
-            return true;
+            // 获取接收方网络地址和端口
+            String receiverAddress = getReceiverAddress(receiverId);
+            int receiverPort = getReceiverPort(receiverId);
+            
+            // 尝试通过网络包直接发送给接收方
+            boolean sentOverNetwork = false;
+            if (receiverAddress != null && receiverPort > 0) {
+                try {
+                    sentOverNetwork = networkMessageService.sendMessageOverNetwork(message, receiverAddress, receiverPort);
+                    if (sentOverNetwork) {
+                        System.out.println("消息已成功通过网络发送给接收方: " + receiverId);
+                    } else {
+                        System.err.println("通过网络发送消息失败，将仅保存到数据库");
+                    }
+                } catch (Exception networkException) {
+                    System.err.println("网络发送过程中发生异常: " + networkException.getMessage());
+                    networkException.printStackTrace();
+                    // 继续执行，将消息保存到数据库
+                }
+            } else {
+                System.err.println("无法获取接收方网络地址或端口，将仅保存到数据库");
+            }
+
+            // 将消息保存到数据库用于事后验证
+            // 这样即使网络发送失败，消息也不会丢失
+            try {
+                messageRepository.save(message);
+                System.out.println("消息已保存到数据库，用于事后验证");
+            } catch (Exception dbException) {
+                System.err.println("保存消息到数据库失败: " + dbException.getMessage());
+                dbException.printStackTrace();
+                // 如果网络发送也失败了，且数据库保存也失败了，则整个发送过程失败
+                return sentOverNetwork; // 如果网络发送成功则返回true，否则返回false
+            }
+            
+            // 返回网络发送的结果
+            // 在实际应用中，您可能想要不同的逻辑：
+            // 1. 只要数据库保存成功就返回true（保证消息不丢失）
+            // 2. 网络发送和数据库保存都成功才返回true（保证即时性和持久性）
+            // 3. 网络发送成功就返回true（优先考虑即时性）
+            return sentOverNetwork;
 
         } catch (Exception e) {
-            System.err.println("发送消息失败: " + e.getMessage());
+            System.err.println("发送消息过程中发生未预期的异常: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -356,5 +403,31 @@ public class MessageServiceImpl implements MessageService {
             System.err.println("获取最近聊天列表失败: " + e.getMessage());
             return Collections.emptyList();
         }
+    }
+    
+    /**
+     * 根据接收方ID获取接收方的网络地址
+     * 在实际应用中，这可能需要查询用户表或其他方式获取
+     * @param receiverId 接收方ID
+     * @return 接收方网络地址
+     */
+    private String getReceiverAddress(Long receiverId) {
+        // 这里应该实现根据receiverId获取接收方网络地址的逻辑
+        // 暂时返回一个默认值用于演示
+        // 在实际应用中，您可能需要查询数据库或其他服务来获取这个信息
+        return "127.0.0.1"; // 默认本地地址
+    }
+    
+    /**
+     * 根据接收方ID获取接收方的监听端口
+     * 在实际应用中，这可能需要查询用户表或其他方式获取
+     * @param receiverId 接收方ID
+     * @return 接收方监听端口
+     */
+    private int getReceiverPort(Long receiverId) {
+        // 这里应该实现根据receiverId获取接收方端口的逻辑
+        // 暂时返回一个默认值用于演示
+        // 在实际应用中，您可能需要查询数据库或其他服务来获取这个信息
+        return 9000; // 默认端口
     }
 }
