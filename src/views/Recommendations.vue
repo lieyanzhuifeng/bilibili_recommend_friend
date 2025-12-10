@@ -271,6 +271,29 @@ function showMessage(text, type = 'info') {
   }, 3000)
 }
 
+// 格式化数字显示的辅助函数
+function formatNumber(value, key) {
+  if (typeof value !== 'number') return value;
+
+  // 数量类数字（整数）
+  if (key.includes('Count') || key.includes('count')) {
+    return Math.round(value);
+  }
+
+  // 比例或相似度类数字
+  if (key.includes('similarity') || key.includes('Similarity') || key.includes('score') || key.includes('Score') || key.includes('rate') || key.includes('Rate')) {
+    // 小于等于1的值转换为百分比
+    if (value <= 1) {
+      return `${(value * 100).toFixed(2)}%`;
+    }
+    // 大于1的值保留2位小数
+    return value.toFixed(2);
+  }
+
+  // 其他数字默认保留2位小数
+  return value.toFixed(2);
+}
+
 // 根据API类型获取定制化的提示文本，支持多推荐条件
 function getCustomTooltipText(user) {
   if (!user || !user.sourceApis) return '';
@@ -286,7 +309,7 @@ function getCustomTooltipText(user) {
         if (user.videoTitle) {
           text = `你和<span class="highlight">${user.username}</span>都在<span class="highlight-important">${user.videoTitle}</span>下评论过，认识一下叭。`;
         } else if (user.commonVideoCount !== undefined) {
-          text = `你和<span class="highlight">${user.username}</span>都评论过<span class="highlight-important">${user.commonVideoCount}个</span>相同的视频，认识一下叭。`;
+          text = `你和<span class="highlight">${user.username}</span>都评论过<span class="highlight-important">${formatNumber(user.commonVideoCount, 'commonVideoCount')}个</span>相同的视频，认识一下叭。`;
         }
         break;
       case 'reply':
@@ -294,16 +317,16 @@ function getCustomTooltipText(user) {
         break;
       case 'sharedVideo':
         if (user.similarityRate !== undefined) {
-          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${user.similarityRate}</span>`;
+          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${formatNumber(user.similarityRate, 'similarityRate')}</span>`;
         } else if (user.similarityScore !== undefined) {
-          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
+          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${formatNumber(user.similarityScore, 'similarityScore')}</span>`;
         }
         break;
       case 'category':
         if (user.commonCategories) {
           const categories = user.commonCategories.join('、');
           const score = user.categoryMatchScore !== undefined ? mapCategoryScore(user.categoryMatchScore) :
-                       user.categorySimilarity !== undefined ? (user.categorySimilarity * 100).toFixed(1) + '%' : '';
+                       user.categorySimilarity !== undefined ? formatNumber(user.categorySimilarity, 'categorySimilarity') : '';
           text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${categories}</span>分区的内容，他的推荐分数为<span class="highlight-important">${score}</span>`;
         }
         break;
@@ -311,17 +334,20 @@ function getCustomTooltipText(user) {
         if (user.commonThemes) {
           const themes = user.commonThemes.join('、');
           const score = user.themeMatchScore !== undefined ? mapCategoryScore(user.themeMatchScore) :
-                       user.themeSimilarity !== undefined ? (user.themeSimilarity * 100).toFixed(1) + '%' : '';
+                       user.themeSimilarity !== undefined ? formatNumber(user.themeSimilarity, 'themeSimilarity') : '';
           text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${themes}</span>的内容形式，他的推荐分数为<span class="highlight-important">${score}</span>`;
         }
         break;
       case 'favoriteSimilarity':
         const similarityScore = user.similarityScore !== undefined ? user.similarityScore :
                                user.favoriteSimilarity !== undefined ? user.favoriteSimilarity : 0;
-        text = `你和<span class="highlight">${user.username}</span>收藏视频的相似度很高，为<span class="highlight-important">${(similarityScore * 100).toFixed(1)}%</span>`;
+        text = `你和<span class="highlight">${user.username}</span>收藏视频的相似度很高，为<span class="highlight-important">${formatNumber(similarityScore, 'similarityScore')}</span>`;
         break;
       case 'commentFriends':
-        text = `<span class="highlight">${user.username}</span>曾经回复过你的评论，认识一下叭。`;
+        // 添加评论相关的数字展示
+        const commonTopicCount = user.commonTopicCount !== undefined ? formatNumber(user.commonTopicCount, 'commonTopicCount') : 0;
+        const commentSimilarity = user.commentSimilarity !== undefined ? formatNumber(user.commentSimilarity, 'commentSimilarity') : '0.00%';
+        text = `<span class="highlight">${user.username}</span>和你有<span class="highlight-important">${commonTopicCount}个</span>共同话题，评论相似度为<span class="highlight-important">${commentSimilarity}</span>`;
         break;
     }
 
@@ -377,7 +403,7 @@ function getDetailedInfo(user) {
 function mapCategoryScore(score) {
   // 使用一个简单的二次函数映射，确保分数在80-100之间
   const mappedScore = 80 + Math.pow(score / 3, 1.5) * 20;
-  return Math.min(100, Math.max(80, mappedScore)).toFixed(1);
+  return Math.min(100, Math.max(80, mappedScore)).toFixed(2);
 }
 
 // 格式化键名显示
@@ -396,15 +422,13 @@ function formatKey(key) {
 
 // 格式化值显示
 function formatValue(value, key) {
-  // 相似度值转换为百分比
-  if (key.toLowerCase().includes('similarity') && typeof value === 'number' && value <= 1) {
-    return `${(value * 100).toFixed(1)}%`
-  }
+  // 复用formatNumber函数统一数字格式化
+  const formattedValue = formatNumber(value, key);
   // 数组类型的值处理
   if (Array.isArray(value)) {
     return value.join('、');
   }
-  return value
+  return formattedValue;
 }
 
 // 获取用户的最高相似度
@@ -420,7 +444,7 @@ function getHighestSimilarity(user) {
     }
   })
 
-  return (maxSimilarity * 100).toFixed(1)
+  return (maxSimilarity * 100).toFixed(2)
 }
 
 // 发送好友申请

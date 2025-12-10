@@ -1,63 +1,91 @@
 <template>
   <div class="filter-container">
-    <h1 class="page-title">用户筛选系统</h1>
+    <h1 class="page-title">筛选条件</h1>
+
+    <!-- 搜索区域 -->
+    <div class="search-section">
+      <div class="search-group">
+        <label class="search-label">搜索视频</label>
+        <div class="search-input-wrapper">
+          <input
+            v-model="searchKeywords.video"
+            type="text"
+            placeholder="输入视频标题关键词"
+            class="search-input"
+            @input="debounceSearch('video')"
+          />
+          <div v-if="videoSearchResults.length > 0" class="search-dropdown">
+            <div
+              v-for="video in videoSearchResults"
+              :key="video.videoId"
+              class="search-item"
+              @click="selectVideo(video)"
+            >
+              {{ video.title }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="search-group">
+        <label class="search-label">搜索标签</label>
+        <div class="search-input-wrapper">
+          <input
+            v-model="searchKeywords.tag"
+            type="text"
+            placeholder="输入标签名称关键词"
+            class="search-input"
+            @input="debounceSearch('tag')"
+          />
+          <div v-if="tagSearchResults.length > 0" class="search-dropdown">
+            <div
+              v-for="tag in tagSearchResults"
+              :key="tag.tagId"
+              class="search-item"
+              @click="selectTag(tag)"
+            >
+              {{ tag.tagName }} ({{ tag.videoCount }}个视频)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 筛选条件选择区域 -->
     <div class="filter-section">
       <Card title="筛选条件" shadow>
-        <div class="filter-options">
-          <!-- 筛选类型选择 -->
-          <div class="filter-group">
-            <label class="filter-label">筛选类型</label>
-            <select v-model="selectedFilterType" class="filter-select">
-              <option value="">请选择筛选类型</option>
-              <option v-for="filter in filterTypes" :key="filter.key" :value="filter.key">
-                {{ filter.name }}
-              </option>
-            </select>
+        <!-- 责任链筛选 -->
+        <div class="filter-content">
+          <div class="filter-tags">
+            <button
+              v-for="api in chainFilterApis"
+              :key="api.key"
+              class="filter-tag"
+              :class="{ 'active': selectedChainFilters.includes(api.key) }"
+              @click="toggleChainFilter(api.key)"
+            >
+              {{ api.name }}
+            </button>
           </div>
 
-          <!-- 动态筛选条件 -->
-          <div v-if="selectedFilterType" class="dynamic-filters">
-            <div v-for="param in getFilterParams(selectedFilterType)" :key="param.name" class="filter-group">
-              <label class="filter-label">{{ param.label }}</label>
-              <template v-if="param.type === 'input'">
-                <input
-                  v-model="filterParams[param.name]"
-                  :type="param.inputType || 'text'"
-                  class="filter-input"
-                  :placeholder="param.placeholder"
-                >
-              </template>
-              <template v-else-if="param.type === 'select'">
-                <select v-model="filterParams[param.name]" class="filter-select">
-                  <option value="">请选择</option>
-                  <option v-for="option in param.options" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </template>
-            </div>
-          </div>
-
-          <!-- 责任链二次筛选选项 -->
-          <div v-if="selectedFilterType && isChainSupported(selectedFilterType)" class="chain-filters">
-            <h3 class="chain-title">责任链二次筛选</h3>
+          <!-- 责任链筛选参数 -->
+          <div v-if="selectedChainFilters.length > 0" class="chain-filters">
+            <h4 class="chain-title">筛选参数</h4>
             <div class="filter-group">
-              <label class="filter-label">活跃度筛选</label>
+              <label class="filter-label">用户活跃度</label>
               <select v-model="chainParams.activity" class="filter-select">
-                <option value="0">不筛选</option>
-                <option value="1">高活跃度</option>
-                <option value="2">中活跃度</option>
-                <option value="3">低活跃度</option>
+                <option value="0">全部</option>
+                <option value="1">高度活跃</option>
+                <option value="2">中度活跃</option>
+                <option value="3">轻度活跃</option>
               </select>
             </div>
             <div class="filter-group">
-              <label class="filter-label">夜猫子筛选</label>
+              <label class="filter-label">夜猫子程度</label>
               <select v-model="chainParams.nightOwl" class="filter-select">
-                <option value="0">不筛选</option>
-                <option value="1">是夜猫子</option>
-                <option value="2">不是夜猫子</option>
+                <option value="0">全部</option>
+                <option value="1">重度夜猫子</option>
+                <option value="2">中度夜猫子</option>
+                <option value="3">轻度夜猫子</option>
               </select>
             </div>
           </div>
@@ -70,7 +98,7 @@
           type="primary"
           size="large"
           :loading="loading"
-          :disabled="!selectedFilterType || !isFilterParamsValid()"
+          :disabled="loading || !selectedChainFilters.length"
           @click="applyFilter"
         >
           {{ loading ? '筛选中...' : '应用筛选' }}
@@ -156,14 +184,21 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { filterApi, friendApi } from '@/services/api'
+import { filterApi, friendApi, searchApi } from '@/services/api'
 import Card from '@/components/Card.vue'
 import Button from '@/components/Button.vue'
 import { getUserAvatar } from '@/utils/avatar'
 
+// 筛选相关API配置 - 责任链筛选
+const chainFilterApis = [
+  { key: 'chainSameUpVideoCount', name: 'UP主视频观看比例', endpoint: '/api/chain/same-up-video-count' },
+  { key: 'chainSameTagVideoCount', name: '标签视频观看比例', endpoint: '/api/chain/same-tag-video-count' },
+  { key: 'chainDeepVideo', name: '深度视频', endpoint: '/api/chain/deep-video' },
+  { key: 'chainSeries', name: '系列作品', endpoint: '/api/chain/series' }
+]
+
 // 响应式数据
-const selectedFilterType = ref('')
-const filterParams = ref({})
+const selectedChainFilters = ref([])
 const chainParams = ref({ activity: 0, nightOwl: 0 })
 const filterResults = ref([])
 const loading = ref(false)
@@ -174,20 +209,11 @@ const tooltipUser = ref(null)
 const tooltipStyle = ref({})
 const addingFriendId = ref(null)
 
-// 筛选类型配置
-const filterTypes = [
-  { key: 'sameTag', name: '同一标签筛选', endpoint: '/api/filter/same-tag' },
-  { key: 'sameUpVideoCount', name: 'UP主视频观看比例筛选', endpoint: '/api/filter/same-up-video-count' },
-  { key: 'sameTagVideoCount', name: '标签视频观看比例筛选', endpoint: '/api/filter/same-tag-video-count' },
-  { key: 'nightOwl', name: '夜猫子用户筛选', endpoint: '/api/filter/night-owl' },
-  { key: 'deepVideo', name: '深度视频筛选', endpoint: '/api/filter/deep-video' },
-  { key: 'series', name: '系列作品筛选', endpoint: '/api/filter/series' },
-  // 责任链筛选
-  { key: 'chainSameUpVideoCount', name: 'UP主视频观看比例 + 责任链筛选', endpoint: '/api/chain/same-up-video-count' },
-  { key: 'chainSameTagVideoCount', name: '标签视频观看比例 + 责任链筛选', endpoint: '/api/chain/same-tag-video-count' },
-  { key: 'chainDeepVideo', name: '深度视频筛选 + 责任链筛选', endpoint: '/api/chain/deep-video' },
-  { key: 'chainSeries', name: '系列作品筛选 + 责任链筛选', endpoint: '/api/chain/series' }
-]
+// 搜索相关数据
+const searchKeywords = ref({ video: '', tag: '' })
+const videoSearchResults = ref([])
+const tagSearchResults = ref([])
+const searchTimeout = ref(null)
 
 // 筛选参数配置
 const filterParamsConfig = {
@@ -269,27 +295,79 @@ function getFilterParams(filterType) {
   return filterParamsConfig[filterType] || []
 }
 
-// 检查是否支持责任链
-function isChainSupported(filterType) {
-  return filterType.startsWith('chain')
+// 切换责任链筛选
+function toggleChainFilter(filterKey) {
+  const index = selectedChainFilters.value.indexOf(filterKey)
+  if (index > -1) {
+    selectedChainFilters.value.splice(index, 1)
+  } else {
+    selectedChainFilters.value.push(filterKey)
+  }
+}
+
+// 重置其他筛选参数
+function resetOtherFilterParams() {
+  otherFilterParams.value = {}
+}
+
+// 搜索防抖函数
+function debounceSearch(type) {
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+  }
+
+  searchTimeout.value = setTimeout(async () => {
+    const keyword = searchKeywords.value[type]
+    if (keyword.trim() === '') {
+      type === 'video' ? videoSearchResults.value = [] : tagSearchResults.value = []
+      return
+    }
+
+    try {
+      if (type === 'video') {
+        const results = await searchApi.searchVideos(keyword)
+        videoSearchResults.value = results.data || []
+      } else {
+        const results = await searchApi.searchTags(keyword)
+        tagSearchResults.value = results.data || []
+      }
+    } catch (error) {
+      console.error(`搜索${type}失败:`, error)
+      showMessage(`搜索${type}失败，请稍后重试`, 'error')
+    }
+  }, 500)
+}
+
+// 选择视频
+function selectVideo(video) {
+  // 清空搜索框和结果
+  searchKeywords.value.video = ''
+  videoSearchResults.value = []
+}
+
+// 选择标签
+function selectTag(tag) {
+  // 清空搜索框和结果
+  searchKeywords.value.tag = ''
+  tagSearchResults.value = []
 }
 
 // 检查筛选参数是否有效
 function isFilterParamsValid() {
-  if (!selectedFilterType.value) return false
-
-  const params = getFilterParams(selectedFilterType.value)
-  for (const param of params) {
-    if (filterParams.value[param.name] === undefined || filterParams.value[param.name] === null || filterParams.value[param.name] === '') {
-      return false
-    }
-  }
+  // 责任链筛选不需要额外的ID参数，只需要activity和nightOwl参数（可选）
   return true
 }
 
 // 应用筛选
 async function applyFilter() {
-  if (!selectedFilterType.value || !isFilterParamsValid()) {
+  // 检查是否选择了筛选条件
+  if (selectedChainFilters.value.length === 0) {
+    showMessage('请选择至少一个筛选条件', 'warning')
+    return
+  }
+
+  // 检查参数有效性
+  if (!isFilterParamsValid()) {
     showMessage('请填写完整的筛选条件', 'warning')
     return
   }
@@ -298,45 +376,43 @@ async function applyFilter() {
   message.value = ''
 
   try {
-    let results
-    const isChainFilter = selectedFilterType.value.startsWith('chain')
+    // 处理责任链筛选（支持多选，结果合并）
+    const chainResults = []
 
-    // 根据筛选类型调用相应的API
-    switch (selectedFilterType.value) {
-      case 'sameTag':
-        results = await filterApi.sameTag(filterParams.value)
-        break
-      case 'sameUpVideoCount':
-        results = await filterApi.sameUpVideoCount(filterParams.value)
-        break
-      case 'sameTagVideoCount':
-        results = await filterApi.sameTagVideoCount(filterParams.value)
-        break
-      case 'nightOwl':
-        results = await filterApi.nightOwl(filterParams.value)
-        break
-      case 'deepVideo':
-        results = await filterApi.deepVideo(filterParams.value)
-        break
-      case 'series':
-        results = await filterApi.series(filterParams.value)
-        break
-      // 责任链筛选
-      case 'chainSameUpVideoCount':
-        results = await filterApi.chainSameUpVideoCount(filterParams.value, chainParams.value)
-        break
-      case 'chainSameTagVideoCount':
-        results = await filterApi.chainSameTagVideoCount({ ...filterParams.value, ...chainParams.value })
-        break
-      case 'chainDeepVideo':
-        results = await filterApi.chainDeepVideo({ ...filterParams.value, ...chainParams.value })
-        break
-      case 'chainSeries':
-        results = await filterApi.chainSeries({ ...filterParams.value, ...chainParams.value })
-        break
-      default:
-        throw new Error('未知的筛选类型')
+    for (const filterKey of selectedChainFilters.value) {
+      let chainFilterResults
+
+      // 根据筛选类型调用相应的API
+      switch (filterKey) {
+        case 'chainSameUpVideoCount':
+          chainFilterResults = await filterApi.chainSameUpVideoCount({}, chainParams.value)
+          break
+        case 'chainSameTagVideoCount':
+          chainFilterResults = await filterApi.chainSameTagVideoCount({ ...{}, ...chainParams.value })
+          break
+        case 'chainDeepVideo':
+          chainFilterResults = await filterApi.chainDeepVideo({ ...{}, ...chainParams.value })
+          break
+        case 'chainSeries':
+          chainFilterResults = await filterApi.chainSeries({ ...{}, ...chainParams.value })
+          break
+        default:
+          throw new Error('未知的责任链筛选类型')
+      }
+
+      if (Array.isArray(chainFilterResults)) {
+        chainResults.push(...chainFilterResults)
+      }
     }
+
+    // 去重并合并责任链筛选结果
+    const uniqueUsers = new Map()
+    chainResults.forEach(user => {
+      if (!uniqueUsers.has(user.userId)) {
+        uniqueUsers.set(user.userId, user)
+      }
+    })
+    const results = Array.from(uniqueUsers.values())
 
     // 处理结果
     filterResults.value = Array.isArray(results) ? results : []
@@ -356,11 +432,13 @@ async function applyFilter() {
 
 // 重置筛选条件
 function resetFilters() {
-  selectedFilterType.value = ''
-  filterParams.value = {}
+  selectedChainFilters.value = []
   chainParams.value = { activity: 0, nightOwl: 0 }
   filterResults.value = []
   message.value = ''
+  searchKeywords.value = { video: '', tag: '' }
+  videoSearchResults.value = []
+  tagSearchResults.value = []
 }
 
 // 发送好友请求
@@ -524,20 +602,114 @@ function getCustomTooltipText(user) {
   text-align: center;
 }
 
+/* 搜索区域样式 */
+.search-section {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  justify-content: center;
+}
+
+.search-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+}
+
+.search-label {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.1);
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--shadow-medium);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.search-item:hover {
+  background-color: var(--bg-secondary);
+}
+
+/* 筛选区域样式 */
 .filter-section {
   margin-bottom: 30px;
 }
 
-.filter-options {
+/* 责任链筛选标签样式 */
+.filter-tags {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
+.filter-tag {
+  padding: 8px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-tag:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.filter-tag.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-light);
+}
+
+/* 筛选组样式 */
 .filter-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 15px;
 }
 
 .filter-label {
@@ -564,12 +736,14 @@ function getCustomTooltipText(user) {
   box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.1);
 }
 
-.dynamic-filters {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px dashed var(--border-color);
+/* 筛选内容样式 */
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
+/* 责任链筛选样式 */
 .chain-filters {
   margin-top: 20px;
   padding: 20px;

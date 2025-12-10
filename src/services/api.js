@@ -283,6 +283,14 @@ export const filterApi = {
   chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params })
 }
 
+// 搜索相关API
+export const searchApi = {
+  // 搜索视频
+  searchVideos: (keyword) => get('/api/users/videos/search', { keyword }),
+  // 搜索标签
+  searchTags: (keyword) => get('/api/users/tags/search', { keyword })
+}
+
 // 登录相关API
 export const loginApi = {
   login: async ({ userId } = {}) => {
@@ -306,7 +314,8 @@ export default {
   friendApi,
   messageApi,
   recommendApi,
-  filterApi
+  filterApi,
+  searchApi
 }
 
 // avatar URL helper: 若后端返回相对路径 (/avatars/...), 则拼接为完整 URL
