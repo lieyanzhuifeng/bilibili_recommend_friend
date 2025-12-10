@@ -75,6 +75,61 @@ public class DeepVideoFilterService implements FilterService {
     }
 
     /**
+     * 获取指定用户的深度观看视频列表（使用option 0的标准）
+     *
+     * @param userId 用户ID
+     * @return 深度观看视频的DTO列表
+     */
+    public List<DeepVideoRecommendationDTO> show(Long userId) {
+        // 假设我们使用 option 0 的深度观看标准：观看次数≥5 或 观看时长≥2倍视频时长
+        final int MIN_WATCH_COUNT = 5;
+
+        // 1. 获取用户所有的观看统计
+        List<UserVideoStats> allStats = userVideoStatsRepository.findByUserId(userId);
+        if (allStats.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 筛选深度观看视频
+        List<DeepVideoRecommendationDTO> deepVideos = allStats.stream()
+                .filter(stats -> {
+                    Long videoId = stats.getVideoId();
+                    LocalTime videoDurationTime = videoRepository.findDurationByVideoId(videoId);
+                    if (videoDurationTime == null) {
+                        return false;
+                    }
+
+                    long videoDurationSeconds = convertToSeconds(videoDurationTime);
+                    long minDurationSeconds = videoDurationSeconds * 2; // 2倍视频时长
+                    LocalTime minDurationTime = secondsToLocalTime(minDurationSeconds);
+
+                    return stats.getWatchCount() >= MIN_WATCH_COUNT || stats.getTotalWatchDuration().compareTo(minDurationTime) >= 0;
+                })
+                .map(stats -> {
+                    // 获取视频标题
+                    String videoTitle = getVideoTitle(stats.getVideoId());
+                    // 返回包含用户和视频信息的DTO。由于是查询当前用户，这里User信息固定为当前用户。
+                    User user = userRepository.findByUserId(userId);
+                    if (user != null) {
+                        return new DeepVideoRecommendationDTO(
+                                user.getUserId(),
+                                user.getUsername(),
+                                user.getAvatarPath(),
+                                stats.getVideoId(),
+                                videoTitle,
+                                convertToSeconds(stats.getTotalWatchDuration()),
+                                stats.getWatchCount()
+                        );
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        return deepVideos;
+    }
+
+    /**
      * 转换为DTO
      */
     private List<BaseDTO> convertToDTO(List<UserVideoStats> statsList, Long videoId) {

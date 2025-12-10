@@ -1,6 +1,7 @@
 package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.dto.UserBehaviorRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.entity.UserStatistics;
@@ -104,4 +105,27 @@ public class UserBehaviorRecommendationService implements RecommendationService 
 
         return dotProduct / (norm1 * norm2);
     }
+
+    public Map<String, Object> show(Long userId) {
+        UserStatistics userStats = userStatisticsRepository.findByUserId(userId);
+
+        if (userStats == null) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Object> behaviorStats = new LinkedHashMap<>();
+
+        // 根据实际表结构设置字段
+        behaviorStats.put("totalWatchHours", userStats.getTotalWatchHours());
+        behaviorStats.put("likeRate", userStats.getLikeRate().doubleValue() * 100); // 转百分比
+        behaviorStats.put("coinRate", userStats.getCoinRate().doubleValue() * 100);
+        behaviorStats.put("favoriteRate", userStats.getFavoriteRate().doubleValue() * 100);
+        behaviorStats.put("shareRate", userStats.getShareRate().doubleValue() * 100);
+        behaviorStats.put("activeDays", userStats.getActiveDays());
+        behaviorStats.put("nightWatchMinutes", userStats.getNightWatchMinutes());
+        behaviorStats.put("nightWatchDays", userStats.getNightWatchDays());
+
+        return behaviorStats;
+    }
+
 }

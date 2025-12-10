@@ -2,17 +2,16 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.CategoryRecommendationDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.entity.UserTopCategory;
 import com.bilibili.rec_system.repository.UserRepository;
 import com.bilibili.rec_system.repository.UserTopCategoryRepository;
-import com.bilibili.rec_system.repository.UserTopThemeRepository;
 import com.bilibili.rec_system.repository.VideoCategoryRepository;
 import com.bilibili.rec_system.service.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -140,4 +139,26 @@ public class CategoryRecommendationService implements RecommendationService {
         public double getScore() { return score; }
         public List<String> getCommonCategoryNames() { return commonCategoryNames; }
     }
+
+    //提供用户画像的组件
+    public Map<String, Double> show(Long userId) {
+        // 获取用户的分区偏好
+        List<UserTopCategory> userCategories = userTopCategoryRepository.findTop3ByUserId(userId);
+
+        if (userCategories.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Double> distribution = new LinkedHashMap<>();
+
+        for (UserTopCategory category : userCategories) {
+            String categoryName = getCategoryName(category.getCategoryId());
+            // 将BigDecimal转换为Double百分比（假设proportion是0-1的小数）
+            Double percentage = category.getProportion().doubleValue() * 100;
+            distribution.put(categoryName, percentage);
+        }
+
+        return distribution;
+    }
+
 }

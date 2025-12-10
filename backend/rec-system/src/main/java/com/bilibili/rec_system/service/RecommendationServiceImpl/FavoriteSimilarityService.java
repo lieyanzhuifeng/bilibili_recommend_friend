@@ -2,9 +2,9 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.FavoriteSimilarityDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
-import com.bilibili.rec_system.repository.UserFavoritesRepository;
-import com.bilibili.rec_system.repository.UserRepository;
+import com.bilibili.rec_system.repository.*;
 import com.bilibili.rec_system.service.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +20,9 @@ public class FavoriteSimilarityService implements RecommendationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private VideoRepository videoRepository;
 
     @Override
     public List<BaseDTO> recommendUsers(Long userId) {
@@ -79,4 +82,28 @@ public class FavoriteSimilarityService implements RecommendationService {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
+
+    public Map<Long, String> show(Long userId) {
+        // 获取用户收藏的视频ID列表
+        List<Long> favoriteVideoIds = userFavoritesRepository.findVideoIdsByUserId(userId);
+
+        if (favoriteVideoIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // 使用Repository提供的方法一步获取所有视频标题
+        List<String> videoTitles = videoRepository.findTitlesByVideoIdIn(favoriteVideoIds);
+
+        // 构建映射关系
+        Map<Long, String> favorites = new LinkedHashMap<>();
+
+        // 确保两个列表长度一致
+        int minSize = Math.min(favoriteVideoIds.size(), videoTitles.size());
+        for (int i = 0; i < minSize; i++) {
+            favorites.put(favoriteVideoIds.get(i), videoTitles.get(i));
+        }
+
+        return favorites;
+    }
+
 }

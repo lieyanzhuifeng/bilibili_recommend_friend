@@ -76,7 +76,7 @@ public class UserActivityRecommendationService implements FilterService {
     /**
      * 计算用户活跃等级
      */
-    private String calculateUserLevel(UserStatistics stats) {
+    public String calculateUserLevel(UserStatistics stats) {
         double watchHours = stats.getTotalWatchHours().doubleValue();
         int activeDays = stats.getActiveDays();
 

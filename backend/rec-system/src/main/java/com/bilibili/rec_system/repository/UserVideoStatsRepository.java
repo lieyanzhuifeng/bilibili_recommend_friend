@@ -35,4 +35,6 @@ public interface UserVideoStatsRepository extends JpaRepository<UserVideoStats, 
      */
     @Query("SELECT uvs FROM UserVideoStats uvs WHERE uvs.videoId IN :videoIds")
     List<UserVideoStats> findByVideoIdIn(@Param("videoIds") List<Long> videoIds);
+
+    List<UserVideoStats> findByUserId(Long userId);
 }

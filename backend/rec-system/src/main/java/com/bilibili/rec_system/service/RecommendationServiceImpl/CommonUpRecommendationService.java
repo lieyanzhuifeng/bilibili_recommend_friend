@@ -2,6 +2,7 @@ package com.bilibili.rec_system.service.RecommendationServiceImpl;
 
 import com.bilibili.rec_system.dto.BaseDTO;
 import com.bilibili.rec_system.dto.CommonUpRecommendationDTO;
+import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 import com.bilibili.rec_system.entity.User;
 import com.bilibili.rec_system.repository.UserFollowUpRepository;
 import com.bilibili.rec_system.repository.UserRepository;
@@ -107,4 +108,30 @@ public class CommonUpRecommendationService implements RecommendationService {
                 })
                 .collect(Collectors.toList());
     }
+
+    public List<Map<String, Object>> show(Long userId) {
+        // 获取用户关注的所有UP主ID
+        List<Long> upIds = userFollowUpRepository.findUpIdsByUserId(userId);
+
+        if (upIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Map<String, Object>> upList = new ArrayList<>();
+
+        for (Long upId : upIds) {
+            User up = userRepository.findByUserId(upId);
+            if (up != null) {
+                Map<String, Object> upInfo = new HashMap<>();
+                upInfo.put("upId", up.getUserId());
+                upInfo.put("username", up.getUsername());
+                upInfo.put("avatarPath", up.getAvatarPath());
+                upInfo.put("registerTime", up.getRegisterTime());
+                upList.add(upInfo);
+            }
+        }
+
+        return upList;
+    }
+
 }

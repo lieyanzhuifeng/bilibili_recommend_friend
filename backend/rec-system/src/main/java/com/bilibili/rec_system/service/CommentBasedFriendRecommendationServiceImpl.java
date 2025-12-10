@@ -29,7 +29,7 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
 
     // 配置参数
     private static final int MIN_COMMENT_LENGTH = 100; //评论最小长度
-    private static final double MATCH_SCORE_THRESHOLD = 0.6; //匹配分数门槛
+    private static final double MATCH_SCORE_THRESHOLD = 0.7; //匹配分数门槛
     private static final int MAX_COMMENTS_PER_VIDEO = 50; //一个视频最多参与匹配的评论数
     private static final int MAX_COMMENTS_PER_PERSON = 10; //一个用户最多参与匹配的评论数
     private static final int MAX_RESULTS = 10; //匹配结果最大值

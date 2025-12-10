@@ -15,8 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -800,5 +798,46 @@ public class RecommendationServiceTests {
         }
     }
 
+    //测试孙的大模型部分
+    @Test
+    void testCommentFriendRecommendationAdapter() {
+        System.out.println("=== 测试评论好友推荐适配器 ===");
+
+        // 获取适配器服务
+        RecommendationService service = recommendationServiceFactory.getRecommendationService("comment_friends");
+
+        // 测试用户1-3
+        for (long userId = 1; userId <= 3; userId++) {
+            testSingleUserCommentFriends(userId, service);
+        }
+    }
+
+    private void testSingleUserCommentFriends(Long userId, RecommendationService service) {
+        System.out.println("\n--- 测试用户ID: " + userId + " ---");
+
+        try {
+            // 获取推荐结果
+            List<BaseDTO> baseResult = service.recommendUsers(userId);
+
+            System.out.println("推荐用户数量: " + baseResult.size());
+
+            if (!baseResult.isEmpty()) {
+                // 打印第一个推荐的详细信息
+                BaseDTO firstResult = baseResult.get(0);
+                System.out.println("第一个推荐用户:");
+                System.out.println("  - 用户ID: " + firstResult.getUserId());
+                System.out.println("  - 用户名: " + firstResult.getUsername());
+                System.out.println("  - 头像路径: " + firstResult.getAvatarPath());
+
+
+            } else {
+                System.out.println("❌ 没有推荐结果");
+            }
+
+        } catch (Exception e) {
+            System.err.println("测试用户" + userId + "失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
 }
