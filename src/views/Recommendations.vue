@@ -82,17 +82,15 @@
         <!-- 显示定制化提示文本 -->
         <div v-if="getCustomTooltipText(tooltipUser)" class="custom-tooltip-text" v-html="getCustomTooltipText(tooltipUser)">
         </div>
-        <!-- 如果没有定制化文本，则显示详细信息 -->
-        <template v-else>
-          <div
-            v-for="(value, key) in getDetailedInfo(tooltipUser)"
-            :key="key"
-            class="tooltip-item"
-          >
-            <span class="tooltip-label">{{ formatKey(key) }}:</span>
-            <span class="tooltip-value">{{ formatValue(value, key) }}</span>
-          </div>
-        </template>
+        <!-- 显示所有详细信息 -->
+        <div
+          v-for="(value, key) in getDetailedInfo(tooltipUser)"
+          :key="key"
+          class="tooltip-item"
+        >
+          <span class="tooltip-label">{{ formatKey(key) }}:</span>
+          <span class="tooltip-value">{{ formatValue(value, key) }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -138,14 +136,12 @@ const addingFriendId = ref(null)
 // API配置
 const recommendApis = [
   { key: 'coComment', name: '同视频评论推荐', endpoint: '/api/recommend/co-comment/' },
-  { key: 'reply', name: '回复互动推荐', endpoint: '/api/recommend/reply/' },
-  { key: 'sharedVideo', name: '视频观看相似推荐', endpoint: '/api/recommend/shared-video/' },
-  { key: 'category', name: '分区重合推荐', endpoint: '/api/recommend/category/' },
-  { key: 'theme', name: '内容类型重合推荐', endpoint: '/api/recommend/theme/' },
-  { key: 'userBehavior', name: '用户行为相似推荐', endpoint: '/api/recommend/user-behavior/' },
-  { key: 'commonUp', name: '共同关注UP主推荐', endpoint: '/api/recommend/common-up/' },
-  { key: 'favoriteSimilarity', name: '收藏夹相似推荐', endpoint: '/api/recommend/favorite-similarity/' },
-  { key: 'commentFriends', name: '评论内容相似推荐', endpoint: '/api/recommend/comment-friends/' }
+  { key: 'reply', name: '评论回复推荐', endpoint: '/api/recommend/reply/' },
+  { key: 'sharedVideo', name: '共同分享视频推荐', endpoint: '/api/recommend/shared-video/' },
+  { key: 'category', name: '分类偏好推荐', endpoint: '/api/recommend/category/' },
+  { key: 'theme', name: '主题偏好推荐', endpoint: '/api/recommend/theme/' },
+  { key: 'favoriteSimilarity', name: '收藏相似度推荐', endpoint: '/api/recommend/favorite-similarity/' },
+  { key: 'commentFriends', name: '评论好友推荐', endpoint: '/api/recommend/comment-friends/' }
 ]
 
 // 存储所有API的结果
@@ -288,8 +284,9 @@ function getCustomTooltipText(user) {
     switch (apiKey) {
       case 'coComment':
         if (user.videoTitle) {
-          // 使用颜色标记视频标题
-          text = `你和<span class="highlight">${user.username}</span>都在<span class="highlight-important">《${user.videoTitle}》</span>下评论过，认识一下叭。`;
+          text = `你和<span class="highlight">${user.username}</span>都在<span class="highlight-important">${user.videoTitle}</span>下评论过，认识一下叭。`;
+        } else if (user.commonVideoCount !== undefined) {
+          text = `你和<span class="highlight">${user.username}</span>都评论过<span class="highlight-important">${user.commonVideoCount}个</span>相同的视频，认识一下叭。`;
         }
         break;
       case 'reply':
@@ -297,33 +294,34 @@ function getCustomTooltipText(user) {
         break;
       case 'sharedVideo':
         if (user.similarityRate !== undefined) {
-          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${(user.similarityRate * 100).toFixed(1)}%</span>`;
+          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${user.similarityRate}</span>`;
+        } else if (user.similarityScore !== undefined) {
+          text = `你与<span class="highlight">${user.username}</span>观看过的视频的相似度为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
         }
         break;
       case 'category':
-        if (user.commonCategories && user.categoryMatchScore !== undefined) {
-          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${user.commonCategories.join('、')}</span>分区的内容，他的推荐分数为<span class="highlight-score">${mapCategoryScore(user.categoryMatchScore)}</span>`;
+        if (user.commonCategories) {
+          const categories = user.commonCategories.join('、');
+          const score = user.categoryMatchScore !== undefined ? mapCategoryScore(user.categoryMatchScore) :
+                       user.categorySimilarity !== undefined ? (user.categorySimilarity * 100).toFixed(1) + '%' : '';
+          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${categories}</span>分区的内容，他的推荐分数为<span class="highlight-important">${score}</span>`;
         }
         break;
       case 'theme':
-        if (user.commonThemes && user.themeMatchScore !== undefined) {
-          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${user.commonThemes.join('、')}</span>的内容形式，他的推荐分数为<span class="highlight-score">${mapCategoryScore(user.themeMatchScore)}</span>`;
-        }
-        break;
-      case 'userBehavior':
-        if (user.similarityScore !== undefined) {
-          text = `你和<span class="highlight">${user.username}</span>观看视频习惯的相似度为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
-        }
-        break;
-      case 'commonUp':
-        if (user.commonUpCount !== undefined && user.commonUpNames) {
-          text = `你和<span class="highlight">${user.username}</span>有<span class="highlight-important">${user.commonUpCount}</span>个共同关注UP主，分别是<span class="highlight-important">${user.commonUpNames.join('、')}</span>`;
+        if (user.commonThemes) {
+          const themes = user.commonThemes.join('、');
+          const score = user.themeMatchScore !== undefined ? mapCategoryScore(user.themeMatchScore) :
+                       user.themeSimilarity !== undefined ? (user.themeSimilarity * 100).toFixed(1) + '%' : '';
+          text = `<span class="highlight">${user.username}</span>和你都很喜欢看<span class="highlight-important">${themes}</span>的内容形式，他的推荐分数为<span class="highlight-important">${score}</span>`;
         }
         break;
       case 'favoriteSimilarity':
-        if (user.similarityScore !== undefined) {
-          text = `你和<span class="highlight">${user.username}</span>收藏视频的相似度很高，为<span class="highlight-important">${(user.similarityScore * 100).toFixed(1)}%</span>`;
-        }
+        const similarityScore = user.similarityScore !== undefined ? user.similarityScore :
+                               user.favoriteSimilarity !== undefined ? user.favoriteSimilarity : 0;
+        text = `你和<span class="highlight">${user.username}</span>收藏视频的相似度很高，为<span class="highlight-important">${(similarityScore * 100).toFixed(1)}%</span>`;
+        break;
+      case 'commentFriends':
+        text = `<span class="highlight">${user.username}</span>曾经回复过你的评论，认识一下叭。`;
         break;
     }
 
@@ -398,18 +396,6 @@ function formatKey(key) {
 
 // 格式化值显示
 function formatValue(value, key) {
-  // 分区重合度特殊处理
-  if (key === 'categoryMatchScore' && typeof value === 'number') {
-    return mapCategoryScore(value);
-  }
-  // 内容类型重合度特殊处理
-  if (key === 'themeMatchScore' && typeof value === 'number') {
-    return mapCategoryScore(value);
-  }
-  // 用户行为相似度特殊处理（转换为百分比）
-  if (key === 'similarityScore' && tooltipUser.value && tooltipUser.value.sourceApis?.includes('userBehavior')) {
-    return `${(value * 100).toFixed(1)}%`;
-  }
   // 相似度值转换为百分比
   if (key.toLowerCase().includes('similarity') && typeof value === 'number' && value <= 1) {
     return `${(value * 100).toFixed(1)}%`
@@ -479,7 +465,7 @@ function generateMockData(apiKey) {
         user.similarityScore = similarity
         break
       case 'reply':
-        user.replyCount = Math.floor(Math.random() * 50) + 5
+        user.interactionCount = Math.floor(Math.random() * 50) + 5
         user.similarityScore = similarity
         break
       case 'sharedVideo':
@@ -487,24 +473,16 @@ function generateMockData(apiKey) {
         user.similarityScore = similarity
         break
       case 'category':
-        user.commonCategoryCount = Math.floor(Math.random() * 15) + 3
-        user.similarityScore = similarity
+        user.commonCategories = ['科技', '游戏', '生活'].slice(0, Math.floor(Math.random() * 3) + 1)
+        user.categorySimilarity = similarity
         break
       case 'theme':
-        user.commonThemeCount = Math.floor(Math.random() * 25) + 5
-        user.similarityScore = similarity
-        break
-      case 'userBehavior':
-        user.behaviorSimilarity = similarity
-        user.activeTimeSimilarity = 0.6 + Math.random() * 0.4
-        break
-      case 'commonUp':
-        user.commonUpCount = Math.floor(Math.random() * 30) + 5
-        user.similarityScore = similarity
+        user.commonThemes = ['搞笑', '测评', '教程'].slice(0, Math.floor(Math.random() * 3) + 1)
+        user.themeSimilarity = similarity
         break
       case 'favoriteSimilarity':
         user.commonFavoriteCount = Math.floor(Math.random() * 50) + 10
-        user.similarityScore = similarity
+        user.favoriteSimilarity = similarity
         break
       case 'commentFriends':
         user.commentSimilarity = similarity

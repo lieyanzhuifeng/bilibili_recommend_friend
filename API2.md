@@ -77,7 +77,7 @@
   }
 ]
 ```
-显示：你与username观看过的视频的相似度为similarityRate%，认识一下叭。
+显示：你与username观看过的视频的相似度为similarityRate
 
 ### 4. 分类偏好推荐
 
@@ -100,6 +100,7 @@
   }
 ]
 ```
+显示：username和你都很喜欢看commoncategories分区的内容，他的推荐分数为f(categoryMatchScore)
 
 ### 5. 主题偏好推荐
 
@@ -122,6 +123,7 @@
   }
 ]
 ```
+显示：username和你都很喜欢看commoncategories的内容形式，他的推荐分数为f(categoryMatchScore)
 
 ### 6. 收藏相似度推荐
 
@@ -144,6 +146,7 @@
   }
 ]
 ```
+显示：你和username收藏视频的相似度很高，为similarityScore
 
 ### 7. 评论好友推荐
 
@@ -166,6 +169,7 @@
   }
 ]
 ```
+显示：username曾经回复过你的评论，认识一下叭。
 
 ## 筛选相关API
 
@@ -191,6 +195,7 @@
   }
 ]
 ```
+显示：username去年观看tagName的视频长达totalwatchHours
 
 ### 2. UP主视频观看比例筛选
 
@@ -213,6 +218,7 @@
   }
 ]
 ```
+显示：username看了watchedVideoCount个upName的视频
 
 ### 3. 标签视频观看比例筛选
 
@@ -236,6 +242,7 @@
   }
 ]
 ```
+显示：username看了watchedVideoCount个tagName的视频
 
 ### 4. 夜猫子用户筛选
 
@@ -258,6 +265,7 @@
   }
 ]
 ```
+显示：username夜间活跃天数为activeDays，总的夜间观看时长为watchHours，是轻度/中度/重度夜猫子（这个前端根据请求的具体参数option对应的种类来确定）
 
 ### 5. 深度视频筛选
 
@@ -281,6 +289,7 @@
   }
 ]
 ```
+显示：username深度观看了videotitle，累计观看时长totalWatchDuration分钟，累计观看次数watchCount次
 
 ### 6. 系列作品筛选
 
@@ -303,6 +312,7 @@
   }
 ]
 ```
+显示：Username看完了seriesname视频
 
 ## 责任链相关API
 

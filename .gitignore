@@ -34,3 +34,7 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Project-specific files
+显示信息.txt
+API2.md

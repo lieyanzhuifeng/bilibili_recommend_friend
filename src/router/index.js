@@ -45,6 +45,11 @@ const router = createRouter({
           path: 'friend-management',
           name: 'friendManagement',
           component: () => import('../views/FriendManagement.vue')
+        },
+        {
+          path: 'filter',
+          name: 'filter',
+          component: () => import('../views/Filter.vue')
         }
       ]
     }

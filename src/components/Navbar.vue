@@ -53,6 +53,15 @@
           <i class="nav-icon">🔍</i>
           <span>推荐</span>
         </router-link>
+
+        <router-link
+          to="/filter"
+          class="nav-item"
+          :class="{ active: currentRoute === '/filter' }"
+        >
+          <i class="nav-icon">🎯</i>
+          <span>筛选</span>
+        </router-link>
       </div>
 
       <div class="navbar-user">

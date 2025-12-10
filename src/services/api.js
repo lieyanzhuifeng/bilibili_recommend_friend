@@ -258,8 +258,6 @@ export const recommendApi = {
   sharedVideo: (userId) => get(`/api/recommend/shared-video/${userId}`),
   category: (userId) => get(`/api/recommend/category/${userId}`),
   theme: (userId) => get(`/api/recommend/theme/${userId}`),
-  userBehavior: (userId) => get(`/api/recommend/user-behavior/${userId}`),
-  commonUp: (userId) => get(`/api/recommend/common-up/${userId}`),
   favoriteSimilarity: (userId) => get(`/api/recommend/favorite-similarity/${userId}`),
   commentFriends: (userId) => get(`/api/recommend/comment-friends/${userId}`)
 }
