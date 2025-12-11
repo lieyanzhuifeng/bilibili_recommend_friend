@@ -288,9 +288,7 @@ export const filterApi = {
   chainSameUpVideoCount: (body, params = {}) => post(`/api/chain/same-up-video-count${buildQuery(params)}`, body),
   chainSameTagVideoCount: ({ tagId, ratioOption, ...params } = {}) => get('/api/chain/same-tag-video-count', { tagId, ratioOption, ...params }),
   chainDeepVideo: ({ videoId, option, ...params } = {}) => get('/api/chain/deep-video', { videoId, option, ...params }),
-  chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params }),
-  // 新增：责任链筛选API
-  filterByChain: (params) => post('/api/filter/filter-by-chain', params)
+  chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params })
 }
 
 // 搜索相关API

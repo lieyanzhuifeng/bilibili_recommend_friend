@@ -103,6 +103,7 @@
               @input="debounceFilterSearch('up')"
               placeholder="搜索UP主"
               class="search-input"
+              title="输入UP主名称进行模糊搜索"
             >
             <div v-if="filterUpSearchResults.length > 0" class="search-results">
               <div
@@ -117,33 +118,22 @@
           </div>
           <div v-if="filterFormData.chainSameUpVideoCount.upName" class="selected-item">
             {{ filterFormData.chainSameUpVideoCount.upName }}
-            <button @click="removeFilterUp" class="remove-btn">×</button>
+            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
           </div>
-          <div class="ratio-options">
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
-                value="HIGH"
-              >
-              高比例
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
-                value="MEDIUM"
-              >
-              中比例
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
-                value="LOW"
-              >
-              低比例
-            </label>
+          <div class="slider-container">
+            <label for="sameUpVideoRatio" class="slider-label">观看比例:</label>
+            <input
+              type="range"
+              id="sameUpVideoRatio"
+              v-model="filterFormData.chainSameUpVideoCount.ratioValue"
+              min="1"
+              max="3"
+              step="1"
+              class="slider"
+              title="拖动滑块选择观看比例"
+              @input="updateRatioOption('chainSameUpVideoCount')"
+            >
+            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameUpVideoCount.ratioValue) }}</div>
           </div>
         </div>
 
@@ -160,6 +150,7 @@
               @input="debounceFilterSearch('tag')"
               placeholder="搜索标签"
               class="search-input"
+              title="输入标签名称进行模糊搜索"
             >
             <div v-if="filterTagSearchResults.length > 0" class="search-results">
               <div
@@ -174,33 +165,22 @@
           </div>
           <div v-if="filterFormData.chainSameTagVideoCount.tagName" class="selected-item">
             {{ filterFormData.chainSameTagVideoCount.tagName }}
-            <button @click="removeFilterTag" class="remove-btn">×</button>
+            <button @click="removeFilterTag" class="remove-btn" title="移除选中的标签">×</button>
           </div>
-          <div class="ratio-options">
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
-                value="HIGH"
-              >
-              高比例
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
-                value="MEDIUM"
-              >
-              中比例
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
-                value="LOW"
-              >
-              低比例
-            </label>
+          <div class="slider-container">
+            <label for="sameTagVideoRatio" class="slider-label">观看比例:</label>
+            <input
+              type="range"
+              id="sameTagVideoRatio"
+              v-model="filterFormData.chainSameTagVideoCount.ratioValue"
+              min="1"
+              max="3"
+              step="1"
+              class="slider"
+              title="拖动滑块选择观看比例"
+              @input="updateRatioOption('chainSameTagVideoCount')"
+            >
+            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameTagVideoCount.ratioValue) }}</div>
           </div>
         </div>
 
@@ -217,6 +197,7 @@
               @input="debounceFilterSearch('video')"
               placeholder="搜索视频"
               class="search-input"
+              title="输入视频标题进行模糊搜索"
             >
             <div v-if="filterVideoSearchResults.length > 0" class="search-results">
               <div
@@ -231,33 +212,22 @@
           </div>
           <div v-if="filterFormData.chainDeepVideo.videoTitle" class="selected-item">
             {{ filterFormData.chainDeepVideo.videoTitle }}
-            <button @click="removeFilterVideo" class="remove-btn">×</button>
+            <button @click="removeFilterVideo" class="remove-btn" title="移除选中的视频">×</button>
           </div>
-          <div class="ratio-options">
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainDeepVideo.option"
-                value="HIGH"
-              >
-              高深度
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainDeepVideo.option"
-                value="MEDIUM"
-              >
-              中深度
-            </label>
-            <label>
-              <input
-                type="radio"
-                v-model="filterFormData.chainDeepVideo.option"
-                value="LOW"
-              >
-              低深度
-            </label>
+          <div class="slider-container">
+            <label for="deepVideoRatio" class="slider-label">观看深度:</label>
+            <input
+              type="range"
+              id="deepVideoRatio"
+              v-model="filterFormData.chainDeepVideo.ratioValue"
+              min="1"
+              max="3"
+              step="1"
+              class="slider"
+              title="拖动滑块选择观看深度"
+              @input="updateRatioOption('chainDeepVideo')"
+            >
+            <div class="slider-value">{{ formatRatioOption(filterFormData.chainDeepVideo.ratioValue) }}</div>
           </div>
         </div>
 
@@ -274,6 +244,7 @@
               @input="debounceFilterSearch('series')"
               placeholder="搜索系列标签"
               class="search-input"
+              title="输入系列标签名称进行模糊搜索"
             >
             <div v-if="filterSeriesSearchResults.length > 0" class="search-results">
               <div
@@ -288,7 +259,103 @@
           </div>
           <div v-if="filterFormData.chainSeries.tagName" class="selected-item">
             {{ filterFormData.chainSeries.tagName }}
-            <button @click="removeFilterSeries" class="remove-btn">×</button>
+            <button @click="removeFilterSeries" class="remove-btn" title="移除选中的系列标签">×</button>
+          </div>
+        </div>
+
+        <!-- 同一UP主 -->
+        <div v-if="selectedFilterApis.includes('chainSameUp')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>同一UP主</label>
+            <div class="filter-condition-desc">筛选和您观看同一UP主视频的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.up"
+              @input="debounceFilterSearch('up')"
+              placeholder="搜索UP主"
+              class="search-input"
+              title="输入UP主名称进行模糊搜索"
+            >
+            <div v-if="filterUpSearchResults.length > 0" class="search-results">
+              <div
+                v-for="up in filterUpSearchResults"
+                :key="up.userId"
+                class="search-result-item"
+                @click="selectFilterUp(up)"
+              >
+                {{ up.username }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameUp.upName" class="selected-item">
+            {{ filterFormData.chainSameUp.upName }}
+            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
+          </div>
+        </div>
+
+        <!-- 同一标签 -->
+        <div v-if="selectedFilterApis.includes('chainSameTag')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>同一标签</label>
+            <div class="filter-condition-desc">筛选和您观看同一标签视频的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.tag"
+              @input="debounceFilterSearch('tag')"
+              placeholder="搜索标签"
+              class="search-input"
+              title="输入标签名称进行模糊搜索"
+            >
+            <div v-if="filterTagSearchResults.length > 0" class="search-results">
+              <div
+                v-for="tag in filterTagSearchResults"
+                :key="tag.tagId"
+                class="search-result-item"
+                @click="selectFilterTag(tag)"
+              >
+                {{ tag.tagName }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameTag.tagName" class="selected-item">
+            {{ filterFormData.chainSameTag.tagName }}
+            <button @click="removeFilterTag" class="remove-btn" title="移除选中的标签">×</button>
+          </div>
+        </div>
+
+        <!-- 关注时间缘分 -->
+        <div v-if="selectedFilterApis.includes('chainFollowTime')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>关注时间缘分</label>
+            <div class="filter-condition-desc">筛选和您关注同一UP主时间相近的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.up"
+              @input="debounceFilterSearch('up')"
+              placeholder="搜索UP主"
+              class="search-input"
+              title="输入UP主名称进行模糊搜索"
+            >
+            <div v-if="filterUpSearchResults.length > 0" class="search-results">
+              <div
+                v-for="up in filterUpSearchResults"
+                :key="up.userId"
+                class="search-result-item"
+                @click="selectFilterUp(up)"
+              >
+                {{ up.username }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainFollowTime.upName" class="selected-item">
+            {{ filterFormData.chainFollowTime.upName }}
+            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
           </div>
         </div>
       </div>
@@ -447,12 +514,14 @@ const filterFormData = ref({
   chainSameUpVideoCount: {
     upId: '',
     upName: '',
-    ratioOption: 'HIGH'
+    ratioOption: 'HIGH',
+    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
   },
   chainSameTagVideoCount: {
     tagId: '',
     tagName: '',
-    ratioOption: 'HIGH'
+    ratioOption: 'HIGH',
+    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
   },
   chainFollowTime: {
     upId: '',
@@ -461,7 +530,8 @@ const filterFormData = ref({
   chainDeepVideo: {
     videoId: '',
     videoTitle: '',
-    option: 'HIGH'
+    option: 'HIGH',
+    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
   },
   chainSeries: {
     tagId: '',
@@ -492,6 +562,36 @@ const secondaryFilterResults = ref([])
 const secondaryFilterApplied = ref(false)
 
 // 头像生成函数已从utils/avatar.js导入
+
+// 格式化比例选项
+function formatRatioOption(value) {
+  const ratioMap = {
+    1: '低比例',
+    2: '中比例',
+    3: '高比例',
+    'LOW': '低比例',
+    'MEDIUM': '中比例',
+    'HIGH': '高比例'
+  }
+  return ratioMap[value] || '中比例'
+}
+
+// 监听ratioValue变化，自动更新ratioOption或option
+function updateRatioOption(section) {
+  const ratioValue = filterFormData.value[section].ratioValue
+  const ratioMap = {
+    1: 'LOW',
+    2: 'MEDIUM',
+    3: 'HIGH'
+  }
+
+  // 根据不同的筛选条件使用不同的属性名
+  if (section === 'chainDeepVideo') {
+    filterFormData.value[section].option = ratioMap[ratioValue] || 'MEDIUM'
+  } else {
+    filterFormData.value[section].ratioOption = ratioMap[ratioValue] || 'MEDIUM'
+  }
+}
 
 // API配置
 const recommendApis = [
@@ -595,21 +695,38 @@ function debounceFilterSearch(type) {
     try {
       let results = []
       if (type === 'up') {
-        const response = await searchApi.searchUsers(keyword, 'up')
+        const response = await searchApi.searchUsers(keyword)
         results = response.data || []
         filterUpSearchResults.value = results
+        // 自动填入第一个搜索结果
+        if (results.length > 0) {
+          selectFilterUp(results[0], true)
+        }
       } else if (type === 'tag') {
         const response = await searchApi.searchTags(keyword)
         results = response.data || []
         filterTagSearchResults.value = results
+        // 自动填入第一个搜索结果
+        if (results.length > 0) {
+          selectFilterTag(results[0], true)
+        }
       } else if (type === 'video') {
         const response = await searchApi.searchVideos(keyword)
         results = response.data || []
         filterVideoSearchResults.value = results
+        // 自动填入第一个搜索结果
+        if (results.length > 0) {
+          selectFilterVideo(results[0], true)
+        }
       } else if (type === 'series') {
+        // 注意：searchApi中没有定义searchSeries，使用searchTags替代
         const response = await searchApi.searchTags(keyword)
         results = response.data || []
         filterSeriesSearchResults.value = results
+        // 自动填入第一个搜索结果
+        if (results.length > 0) {
+          selectFilterSeries(results[0], true)
+        }
       }
     } catch (error) {
       console.error(`搜索${type}失败:`, error)
@@ -618,49 +735,99 @@ function debounceFilterSearch(type) {
 }
 
 // 选择筛选UP主
-function selectFilterUp(up) {
-  filterFormData.value.chainSameUpVideoCount.upId = up.upId
-  filterFormData.value.chainSameUpVideoCount.upName = up.upName
-  filterSearchKeywords.value.up = up.upName
-  filterUpSearchResults.value = []
+function selectFilterUp(up, isAutoFill = false) {
+  // 处理用户对象和up主对象的兼容性，优先使用upId/upName，其次使用userId/username
+  const upId = up.upId || up.userId
+  const upName = up.upName || up.username
+
+  // 更新所有相关的UP主筛选条件
+  filterFormData.value.chainSameUp.upId = upId
+  filterFormData.value.chainSameUp.upName = upName
+  filterFormData.value.chainSameUpVideoCount.upId = upId
+  filterFormData.value.chainSameUpVideoCount.upName = upName
+  filterFormData.value.chainFollowTime.upId = upId
+  filterFormData.value.chainFollowTime.upName = upName
+
+  // 更新搜索框的值，让用户看到选中的内容
+  filterSearchKeywords.value.up = upName
+
+  // 只有在手动选择时才清空搜索结果数组
+  if (!isAutoFill) {
+    filterUpSearchResults.value = []
+  }
 }
 
 // 选择筛选标签
-function selectFilterTag(tag) {
+function selectFilterTag(tag, isAutoFill = false) {
+  // 更新所有相关的标签筛选条件
+  filterFormData.value.chainSameTag.tagId = tag.tagId
+  filterFormData.value.chainSameTag.tagName = tag.tagName
   filterFormData.value.chainSameTagVideoCount.tagId = tag.tagId
   filterFormData.value.chainSameTagVideoCount.tagName = tag.tagName
+  filterFormData.value.chainSeries.tagId = tag.tagId
+  filterFormData.value.chainSeries.tagName = tag.tagName
+
+  // 更新搜索框的值，让用户看到选中的内容
   filterSearchKeywords.value.tag = tag.tagName
-  filterTagSearchResults.value = []
+
+  // 只有在手动选择时才清空搜索结果数组
+  if (!isAutoFill) {
+    filterTagSearchResults.value = []
+  }
 }
 
 // 选择筛选视频
-function selectFilterVideo(video) {
+function selectFilterVideo(video, isAutoFill = false) {
   filterFormData.value.chainDeepVideo.videoId = video.videoId
-  filterFormData.value.chainDeepVideo.videoTitle = video.videoTitle
-  filterSearchKeywords.value.video = video.videoTitle
-  filterVideoSearchResults.value = []
+  filterFormData.value.chainDeepVideo.videoTitle = video.title
+
+  // 更新搜索框的值，让用户看到选中的内容
+  filterSearchKeywords.value.video = video.title
+
+  // 只有在手动选择时才清空搜索结果数组
+  if (!isAutoFill) {
+    filterVideoSearchResults.value = []
+  }
 }
 
 // 选择筛选系列
-function selectFilterSeries(series) {
+function selectFilterSeries(series, isAutoFill = false) {
   filterFormData.value.chainSeries.tagId = series.tagId
   filterFormData.value.chainSeries.tagName = series.tagName
+
+  // 更新搜索框的值，让用户看到选中的内容
   filterSearchKeywords.value.series = series.tagName
-  filterSeriesSearchResults.value = []
+
+  // 只有在手动选择时才清空搜索结果数组
+  if (!isAutoFill) {
+    filterSeriesSearchResults.value = []
+  }
 }
 
 // 移除筛选UP主
 function removeFilterUp() {
+  // 清除所有相关的UP主筛选条件
+  filterFormData.value.chainSameUp.upId = ''
+  filterFormData.value.chainSameUp.upName = ''
   filterFormData.value.chainSameUpVideoCount.upId = ''
   filterFormData.value.chainSameUpVideoCount.upName = ''
+  filterFormData.value.chainFollowTime.upId = ''
+  filterFormData.value.chainFollowTime.upName = ''
+
   filterSearchKeywords.value.up = ''
   filterUpSearchResults.value = []
 }
 
 // 移除筛选标签
 function removeFilterTag() {
+  // 清除所有相关的标签筛选条件
+  filterFormData.value.chainSameTag.tagId = ''
+  filterFormData.value.chainSameTag.tagName = ''
   filterFormData.value.chainSameTagVideoCount.tagId = ''
   filterFormData.value.chainSameTagVideoCount.tagName = ''
+  filterFormData.value.chainSeries.tagId = ''
+  filterFormData.value.chainSeries.tagName = ''
+
   filterSearchKeywords.value.tag = ''
   filterTagSearchResults.value = []
 }
@@ -685,98 +852,155 @@ function removeFilterSeries() {
 async function applyFilter() {
   loading.value = true
   try {
-    // 构建筛选参数
-    const filterParams = {
-      userId: getCurrentUserId(),
-      activity: activity.value,
-      nightOwl: nightOwl.value,
-      filterChain: []
-    }
-
-    // 添加选中的筛选API参数
-    if (selectedFilterApis.value.includes('chainSameUp')) {
-      const upData = filterFormData.value.chainSameUp
-      if (upData.upId) {
-        filterParams.filterChain.push({
-          type: 'chainSameUp',
-          upId: upData.upId,
-          durationOption: upData.durationOption
-        })
-      }
-    }
-
-    if (selectedFilterApis.value.includes('chainSameTag')) {
-      const tagData = filterFormData.value.chainSameTag
-      if (tagData.tagId) {
-        filterParams.filterChain.push({
-          type: 'chainSameTag',
-          tagId: tagData.tagId,
-          durationOption: tagData.durationOption
-        })
-      }
-    }
-
-    if (selectedFilterApis.value.includes('chainFollowTime')) {
-      const upData = filterFormData.value.chainFollowTime
-      if (upData.upId) {
-        filterParams.filterChain.push({
-          type: 'chainFollowTime',
-          upId: upData.upId
-        })
-      }
-    }
-
-    if (selectedFilterApis.value.includes('chainSameUpVideoCount')) {
-      const upData = filterFormData.value.chainSameUpVideoCount
-      if (upData.upId) {
-        filterParams.filterChain.push({
-          type: 'chainSameUpVideoCount',
-          upId: upData.upId,
-          ratioOption: upData.ratioOption
-        })
-      }
-    }
-
-    if (selectedFilterApis.value.includes('chainSameTagVideoCount')) {
-      const tagData = filterFormData.value.chainSameTagVideoCount
-      if (tagData.tagId) {
-        filterParams.filterChain.push({
-          type: 'chainSameTagVideoCount',
-          tagId: tagData.tagId,
-          ratioOption: tagData.ratioOption
-        })
-      }
-    }
-
-    if (selectedFilterApis.value.includes('chainDeepVideo')) {
+    // 如果只有深度视频筛选条件，直接调用chainDeepVideo API
+    if (selectedFilterApis.value.length === 1 && selectedFilterApis.value.includes('chainDeepVideo')) {
       const videoData = filterFormData.value.chainDeepVideo
       if (videoData.videoId) {
-        filterParams.filterChain.push({
-          type: 'chainDeepVideo',
+        // 直接调用/api/chain/deep-video接口
+        const response = await filterApi.chainDeepVideo({
+          userId: getCurrentUserId(),
           videoId: videoData.videoId,
-          option: videoData.option
+          option: videoData.option,
+          activity: activity.value,
+          nightOwl: nightOwl.value
         })
-      }
-    }
 
-    if (selectedFilterApis.value.includes('chainSeries')) {
-      const seriesData = filterFormData.value.chainSeries
-      if (seriesData.tagId) {
-        filterParams.filterChain.push({
-          type: 'chainSeries',
-          tagId: seriesData.tagId
-        })
+        // 处理响应结果
+        // 检查响应是否为数组（直接返回数据的情况）
+        if (Array.isArray(response)) {
+          recommendations.value = response
+          showMessage('筛选成功', 'success')
+        // 检查响应是否包含success属性（标准格式的情况）
+        } else if (response.success) {
+          recommendations.value = response.data || []
+          showMessage('筛选成功', 'success')
+        } else {
+          showMessage(response.message || '筛选失败', 'error')
+        }
+      } else {
+        showMessage('请先选择一个视频', 'warning')
       }
-    }
-
-    // 调用筛选API
-    const response = await filterApi.filterByChain(filterParams)
-    if (response.success) {
-      // 筛选结果直接用于推荐数据
-      recommendations.value = response.data || []
-      showMessage('筛选成功', 'success')
     } else {
-      showMessage(response.message || '筛选失败', 'error')
+      // 检查是否有选中的筛选条件
+      if (selectedFilterApis.value.length === 0) {
+        showMessage('请至少选择一个筛选条件', 'warning')
+        return
+      }
+
+      // 对于多个筛选条件，目前只支持一个主要筛选条件
+      // 这里选择第一个选中的筛选条件
+      const mainFilterApi = selectedFilterApis.value[0]
+
+      // 根据选中的筛选条件调用对应的API
+      let response
+      switch (mainFilterApi) {
+        case 'chainSameUp':
+          const upData = filterFormData.value.chainSameUp
+          if (upData.upId) {
+            response = await filterApi.chainSameUp({
+              userId: getCurrentUserId(),
+              upId: upData.upId,
+              durationOption: upData.durationOption,
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
+          } else {
+            showMessage('请先选择一个UP主', 'warning')
+            return
+          }
+          break
+        case 'chainSameTag':
+          const tagData = filterFormData.value.chainSameTag
+          if (tagData.tagId) {
+            response = await filterApi.chainSameTag({
+              userId: getCurrentUserId(),
+              tagId: tagData.tagId,
+              durationOption: tagData.durationOption,
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
+          } else {
+            showMessage('请先选择一个标签', 'warning')
+            return
+          }
+          break
+        case 'chainFollowTime':
+          const followTimeData = filterFormData.value.chainFollowTime
+          if (followTimeData.upId) {
+            response = await filterApi.chainFollowTime({
+              userId: getCurrentUserId(),
+              upId: followTimeData.upId,
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
+          } else {
+            showMessage('请先选择一个UP主', 'warning')
+            return
+          }
+          break
+        case 'chainSameUpVideoCount':
+          const sameUpVideoCountData = filterFormData.value.chainSameUpVideoCount
+          if (sameUpVideoCountData.upId) {
+            response = await filterApi.chainSameUpVideoCount(
+              { upId: sameUpVideoCountData.upId },
+              {
+                userId: getCurrentUserId(),
+                ratioOption: sameUpVideoCountData.ratioOption,
+                activity: activity.value,
+                nightOwl: nightOwl.value
+              }
+            )
+          } else {
+            showMessage('请先选择一个UP主', 'warning')
+            return
+          }
+          break
+        case 'chainSameTagVideoCount':
+          const sameTagVideoCountData = filterFormData.value.chainSameTagVideoCount
+          if (sameTagVideoCountData.tagId) {
+            response = await filterApi.chainSameTagVideoCount({
+              userId: getCurrentUserId(),
+              tagId: sameTagVideoCountData.tagId,
+              ratioOption: sameTagVideoCountData.ratioOption,
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
+          } else {
+            showMessage('请先选择一个标签', 'warning')
+            return
+          }
+          break
+        case 'chainSeries':
+          const seriesData = filterFormData.value.chainSeries
+          if (seriesData.tagId) {
+            response = await filterApi.chainSeries({
+              userId: getCurrentUserId(),
+              tagId: seriesData.tagId,
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
+          } else {
+            showMessage('请先选择一个系列标签', 'warning')
+            return
+          }
+          break
+        default:
+          showMessage('不支持的筛选条件', 'error')
+          return
+      }
+
+      // 处理响应结果
+      // 检查响应是否为数组（直接返回数据的情况）
+      if (Array.isArray(response)) {
+        recommendations.value = response
+        showMessage('筛选成功', 'success')
+      // 检查响应是否包含success属性（标准格式的情况）
+      } else if (response.success) {
+        recommendations.value = response.data || []
+        showMessage('筛选成功', 'success')
+      } else {
+        showMessage(response.message || '筛选失败', 'error')
+      }
     }
   } catch (error) {
     console.error('筛选失败:', error)
@@ -941,21 +1165,12 @@ async function applySecondaryFilter() {
   loading.value = true
 
   try {
-    // 获取筛选参数
-    const params = getChainParams()
+    // 目前二次筛选功能暂时不可用，因为后端API尚未实现
+    showMessage('二次筛选功能正在开发中', 'info')
 
-    // 调用筛选API
-    const response = await filterApi.filterByChain(params)
-
-    // 处理响应结果
-    secondaryFilterResults.value = response.data || []
+    // 为了演示，我们可以显示一个空结果
+    secondaryFilterResults.value = []
     secondaryFilterApplied.value = true
-
-    if (secondaryFilterResults.value.length > 0) {
-      showMessage(`成功应用二次筛选，筛选结果包含 ${secondaryFilterResults.value.length} 位用户`, 'success')
-    } else {
-      showMessage('二次筛选没有找到符合条件的用户', 'info')
-    }
   } catch (error) {
     console.error('二次筛选失败:', error)
     showMessage('二次筛选失败，请稍后重试', 'error')
@@ -1782,6 +1997,65 @@ onMounted(() => {
   border-color: #4682b4;
 }
 
+/* 滑块样式 */
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.slider-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4682b4;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #356a96;
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4682b4;
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #356a96;
+}
+
+.slider-value {
+  font-size: 0.9rem;
+  color: #4682b4;
+  font-weight: 500;
+  margin-top: 5px;
+  text-align: center;
+}
+
 /* 用户网格 */
 .user-grid {
   display: grid;
@@ -2160,6 +2434,10 @@ onMounted(() => {
   outline: none;
   border-color: #ff69b4;
   box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
+}
+
+.search-input-group {
+  position: relative;
 }
 
 .search-results {
