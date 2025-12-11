@@ -254,14 +254,14 @@ export const messageApi = {
 }
 
 export const recommendApi = {
-  // 推荐相关API（按照API2.md文档）
-  coComment: (userId) => get(`/api/recommend/co-comment/${userId}`),
-  reply: (userId) => get(`/api/recommend/reply/${userId}`),
-  sharedVideo: (userId) => get(`/api/recommend/shared-video/${userId}`),
-  category: (userId) => get(`/api/recommend/category/${userId}`),
-  theme: (userId) => get(`/api/recommend/theme/${userId}`),
-  favoriteSimilarity: (userId) => get(`/api/recommend/favorite-similarity/${userId}`),
-  commentFriends: (userId) => get(`/api/recommend/comment-friends/${userId}`)
+  // 推荐相关API（使用责任链筛选，按照API2.md文档）
+  coComment: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/co-comment/${userId}`, { activity, nightOwl }),
+  reply: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/reply/${userId}`, { activity, nightOwl }),
+  sharedVideo: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/shared-video/${userId}`, { activity, nightOwl }),
+  category: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/category/${userId}`, { activity, nightOwl }),
+  theme: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/theme/${userId}`, { activity, nightOwl }),
+  favoriteSimilarity: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/favorite-similarity/${userId}`, { activity, nightOwl }),
+  commentFriends: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/comment-friends/${userId}`, { activity, nightOwl })
 }
 
 export const filterApi = {

@@ -10,16 +10,19 @@
             <input
               type="range"
               min="0"
-              max="100"
-              v-model.number="activityLevel"
+              max="7"
+              step="1"
+              v-model.number="activity"
               class="slider-input"
             >
-            <div class="slider-value">{{ activityLevel }}%</div>
+            <div class="slider-value">{{ activity }} (0-7, 0表示不筛选)</div>
             <div class="slider-labels">
+              <span>不筛选(0)</span>
               <span>低</span>
               <span>中</span>
               <span>高</span>
             </div>
+            <div class="slider-tip">提示：0表示不筛选，1-7表示活跃度逐渐增加</div>
           </div>
         </div>
         <div class="sidebar-section">
@@ -28,16 +31,19 @@
             <input
               type="range"
               min="0"
-              max="100"
-              v-model.number="nightOwlLevel"
+              max="15"
+              step="1"
+              v-model.number="nightOwl"
               class="slider-input"
             >
-            <div class="slider-value">{{ nightOwlLevel }}%</div>
+            <div class="slider-value">{{ nightOwl }} (0-15, 0表示不筛选)</div>
             <div class="slider-labels">
+              <span>不筛选(0)</span>
               <span>轻度</span>
               <span>中度</span>
               <span>重度</span>
             </div>
+            <div class="slider-tip">提示：0表示不筛选，1-15表示夜猫子程度逐渐增加</div>
           </div>
         </div>
       </aside>
@@ -448,8 +454,8 @@ const selectedVideos = ref([])
 const selectedSeries = ref([])
 
 // 侧边栏筛选条件（轮轴控制）
-const activityLevel = ref(50) // 初始值设为中间值50%
-const nightOwlLevel = ref(50) // 初始值设为中间值50%
+const activity = ref(0) // 初始值设为0，表示不筛选
+const nightOwl = ref(0) // 初始值设为0，表示不筛选
 
 // 二次筛选结果
 const secondaryFilterResults = ref([])
@@ -618,8 +624,8 @@ async function applyFilter() {
     // 构建筛选参数
     const filterParams = {
       userId: getCurrentUserId(),
-      activityLevel: activityLevel.value,
-      nightOwlLevel: nightOwlLevel.value,
+      activity: activity.value,
+      nightOwl: nightOwl.value,
       filterChain: []
     }
 
@@ -895,9 +901,11 @@ async function fetchRecommendations() {
   message.value = '正在获取推荐用户...'
 
   try {
-    // 构建请求参数
+    // 构建请求参数，包含用户ID和责任链筛选参数
     const params = {
-      userId: getCurrentUserId()
+      userId: getCurrentUserId(),
+      activity: activity.value,
+      nightOwl: nightOwl.value
     }
 
     // 调用责任链推荐API
@@ -929,12 +937,59 @@ async function fetchRecommendations() {
         return
     }
 
-    if (response.success) {
+    // 添加调试信息
+    console.log('API响应:', response)
+    console.log('当前用户ID:', getCurrentUserId())
+    console.log('activity:', activity.value)
+    console.log('nightOwl:', nightOwl.value)
+
+    // 检查响应数据类型
+    console.log('response.data类型:', typeof response.data)
+    console.log('response.data是否为数组:', Array.isArray(response.data))
+
+    // 检查响应结构（处理有success字段和直接返回数组的情况）
+    if (response.success !== undefined) {
+      if (response.success) {
+        console.log('推荐数据:', response.data)
+        
+        // 尝试多种方式提取用户数据
+        let userData = response.data || []
+        if (!Array.isArray(userData) && userData.users) {
+          userData = userData.users
+          console.log('从response.data.users提取用户数据:', userData)
+        }
+        
+        recommendations.value = userData || []
+      } else {
+        console.log('API请求失败:', response.message)
+        showMessage(response.message || '获取推荐失败', 'error')
+        return
+      }
+    } else if (Array.isArray(response)) {
+      // API直接返回用户数组
+      console.log('API直接返回用户数组:', response)
+      recommendations.value = response || []
+    } else if (Array.isArray(response.data)) {
+      // API返回的是包含data字段的对象，且data是数组
+      console.log('API返回data字段为用户数组:', response.data)
       recommendations.value = response.data || []
-      showMessage('推荐获取成功', 'success')
     } else {
-      showMessage(response.message || '获取推荐失败', 'error')
+      console.log('API响应格式未知:', response)
+      recommendations.value = []
+      showMessage('获取推荐失败，API响应格式未知', 'error')
+      return
     }
+    
+    console.log('recommendations数组:', recommendations.value)
+    console.log('recommendations数组长度:', recommendations.value.length)
+    
+    // 检查第一个用户对象的结构
+    if (recommendations.value.length > 0) {
+      console.log('第一个用户对象:', recommendations.value[0])
+      console.log('用户对象属性:', Object.keys(recommendations.value[0]))
+    }
+    
+    showMessage('推荐获取成功', 'success')
   } catch (error) {
     console.error('获取推荐失败:', error)
     showMessage('获取推荐失败，请稍后重试', 'error')
@@ -1670,11 +1725,18 @@ onMounted(() => {
 .slider-labels {
   display: flex;
   justify-content: space-between;
+  margin-top: 10px;
   font-size: 12px;
   color: #666;
 }
 
-/* 响应式设计 */
+.slider-tip {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+}/* 响应式设计 */
 @media (max-width: 768px) {
   .main-layout {
     flex-direction: column;
