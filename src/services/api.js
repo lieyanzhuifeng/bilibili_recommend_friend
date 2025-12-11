@@ -58,7 +58,9 @@ export const userApi = {
   // 搜索视频（根据视频标题）
   searchVideos: (keyword) => get('/api/users/videos/search', { keyword }),
   // 搜索标签（根据标签名称）
-  searchTags: (keyword) => get('/api/users/tags/search', { keyword })
+  searchTags: (keyword) => get('/api/users/tags/search', { keyword }),
+  // 获取用户完整画像
+  getUserProfile: (userId) => get(`/api/user-profile/show/${userId}`)
 }
 
 export const friendApi = {
@@ -280,7 +282,9 @@ export const filterApi = {
   chainSameUpVideoCount: (body, params = {}) => post(`/api/chain/same-up-video-count${buildQuery(params)}`, body),
   chainSameTagVideoCount: ({ tagId, ratioOption, ...params } = {}) => get('/api/chain/same-tag-video-count', { tagId, ratioOption, ...params }),
   chainDeepVideo: ({ videoId, option, ...params } = {}) => get('/api/chain/deep-video', { videoId, option, ...params }),
-  chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params })
+  chainSeries: ({ tagId, ...params } = {}) => get('/api/chain/series', { tagId, ...params }),
+  // 新增：责任链筛选API
+  filterByChain: (params) => post('/api/filter/filter-by-chain', params)
 }
 
 // 搜索相关API
@@ -288,7 +292,9 @@ export const searchApi = {
   // 搜索视频
   searchVideos: (keyword) => get('/api/users/videos/search', { keyword }),
   // 搜索标签
-  searchTags: (keyword) => get('/api/users/tags/search', { keyword })
+  searchTags: (keyword) => get('/api/users/tags/search', { keyword }),
+  // 搜索UP主
+  searchUps: (keyword) => get('/api/users/search', { keyword })
 }
 
 // 登录相关API

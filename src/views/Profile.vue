@@ -88,79 +88,39 @@
         <div v-if="activeTab === 'portrait'" class="portrait-content">
           <h2 class="portrait-title">我的个人画像</h2>
 
-          <!-- 用户兴趣标签 -->
-          <Card class="portrait-card" title="兴趣标签">
-            <div class="interests-tags">
+          <!-- 分类分布 -->
+          <Card class="portrait-card" title="分类分布">
+            <div class="distribution">
               <div v-if="userPortrait.loading" class="loading">加载中...</div>
               <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
-              <div v-else-if="userPortrait.interests.length > 0" class="tags-list">
-                <span v-for="tag in userPortrait.interests" :key="tag.id" class="tag-item">
-                  {{ tag.name }}
-                  <span class="tag-score">{{ (tag.score * 100).toFixed(1) }}%</span>
+              <div v-else-if="Object.keys(userPortrait.categoryDistribution).length > 0" class="tags-list">
+                <span v-for="(score, name) in userPortrait.categoryDistribution" :key="`cat-${name}`" class="tag-item">
+                  {{ name }}
+                  <span class="tag-score">{{ score.toFixed(1) }}</span>
                 </span>
               </div>
-              <div v-else class="empty">暂无兴趣标签数据</div>
+              <div v-else class="empty">暂无分类分布数据</div>
             </div>
           </Card>
 
-          <!-- 活跃时间模式 -->
-          <Card class="portrait-card" title="活跃时间模式">
-            <div class="activity-pattern">
+          <!-- 主题分布 -->
+          <Card class="portrait-card" title="主题分布">
+            <div class="distribution">
               <div v-if="userPortrait.loading" class="loading">加载中...</div>
               <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
-              <div v-else>
-                <div class="time-slots">
-                  <div v-for="slot in userPortrait.activeTimeSlots" :key="slot.time" class="time-slot">
-                    <span class="time-range">{{ slot.time }}</span>
-                    <div class="activity-bar">
-                      <div class="activity-fill" :style="{ width: `${slot.activity * 100}%`, backgroundColor: getActivityColor(slot.activity) }"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="activity-summary">
-                  <div class="summary-item">
-                    <span class="summary-label">最活跃时段：</span>
-                    <span class="summary-value">{{ userPortrait.mostActiveTime }}</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="summary-label">平均每日活跃时长：</span>
-                    <span class="summary-value">{{ userPortrait.dailyActiveHours.toFixed(1) }}小时</span>
-                  </div>
-                </div>
+              <div v-else-if="Object.keys(userPortrait.themeDistribution).length > 0" class="tags-list">
+                <span v-for="(score, name) in userPortrait.themeDistribution" :key="`theme-${name}`" class="tag-item">
+                  {{ name }}
+                  <span class="tag-score">{{ score.toFixed(1) }}</span>
+                </span>
               </div>
+              <div v-else class="empty">暂无主题分布数据</div>
             </div>
           </Card>
 
-          <!-- 视频观看偏好 -->
-          <Card class="portrait-card" title="视频观看偏好">
-            <div class="video-preferences">
-              <div v-if="userPortrait.loading" class="loading">加载中...</div>
-              <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
-              <div v-else>
-                <div class="preference-item">
-                  <span class="preference-label">偏好视频类型：</span>
-                  <div class="preference-value">
-                    <span v-for="(type, index) in userPortrait.videoTypes" :key="type" class="type-tag">
-                      {{ type }}{{ index < userPortrait.videoTypes.length - 1 ? ', ' : '' }}
-                    </span>
-                  </div>
-                </div>
-                <div class="preference-item">
-                  <span class="preference-label">平均视频时长：</span>
-                  <span class="preference-value">{{ userPortrait.averageVideoDuration }}分钟</span>
-                </div>
-                <div class="preference-item">
-                  <span class="preference-label">观看完成率：</span>
-                  <div class="preference-value">
-                    <div class="completion-bar">
-                      <div class="completion-fill" :style="{ width: `${userPortrait.averageCompletionRate * 100}%` }"></div>
-                    </div>
-                    <span class="completion-text">{{ (userPortrait.averageCompletionRate * 100).toFixed(1) }}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
+
+
+
 
           <!-- 关注UP主偏好 -->
           <Card class="portrait-card" title="关注UP主偏好">
@@ -173,15 +133,100 @@
                     <img :src="avatar(up)" alt="UP主头像" class="up-avatar" />
                     <div class="up-info">
                       <span class="up-name">{{ up.name }}</span>
-                      <span class="up-fans">{{ up.fansCount }}粉丝</span>
-                    </div>
-                    <div class="up-engagement">
-                      <span class="engagement-score">{{ (up.engagementScore * 100).toFixed(1) }}%</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div v-else class="empty">暂无关注UP主数据</div>
+            </div>
+          </Card>
+
+          <!-- 收藏视频 -->
+          <Card class="portrait-card" title="收藏视频">
+            <div class="favorite-videos">
+              <div v-if="userPortrait.loading" class="loading">加载中...</div>
+              <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
+              <div v-else-if="userPortrait.favoriteVideos.length > 0">
+                <div class="video-list">
+                  <div v-for="video in userPortrait.favoriteVideos" :key="video.id" class="video-item">
+                    <div class="video-title">{{ video.title }}</div>
+                    <div class="video-id">视频ID: {{ video.id }}</div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty">暂无收藏视频数据</div>
+            </div>
+          </Card>
+
+          <!-- 行为统计 -->
+          <Card class="portrait-card" title="行为统计">
+            <div class="behavior-stats">
+              <div v-if="userPortrait.loading" class="loading">加载中...</div>
+              <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
+              <div v-else>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <span class="stat-label">点赞率</span>
+                    <div class="stat-value">
+                      <div class="stat-bar">
+                        <div class="stat-fill" :style="{ width: `${userPortrait.behaviorStatistics.likeRate}%` }"></div>
+                      </div>
+                      <span class="stat-percent">{{ userPortrait.behaviorStatistics.likeRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">投币率</span>
+                    <div class="stat-value">
+                      <div class="stat-bar">
+                        <div class="stat-fill" :style="{ width: `${userPortrait.behaviorStatistics.coinRate}%` }"></div>
+                      </div>
+                      <span class="stat-percent">{{ userPortrait.behaviorStatistics.coinRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">收藏率</span>
+                    <div class="stat-value">
+                      <div class="stat-bar">
+                        <div class="stat-fill" :style="{ width: `${userPortrait.behaviorStatistics.favoriteRate}%` }"></div>
+                      </div>
+                      <span class="stat-percent">{{ userPortrait.behaviorStatistics.favoriteRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">分享率</span>
+                    <div class="stat-value">
+                      <div class="stat-bar">
+                        <div class="stat-fill" :style="{ width: `${userPortrait.behaviorStatistics.shareRate}%` }"></div>
+                      </div>
+                      <span class="stat-percent">{{ userPortrait.behaviorStatistics.shareRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">总观看时长</span>
+                    <div class="stat-value simple">
+                      <span>{{ userPortrait.behaviorStatistics.totalWatchHours.toFixed(1) }}小时</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">活跃天数</span>
+                    <div class="stat-value simple">
+                      <span>{{ userPortrait.behaviorStatistics.activeDays }}天</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">夜间观看天数</span>
+                    <div class="stat-value simple">
+                      <span>{{ userPortrait.behaviorStatistics.nightWatchDays }}天</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">夜间观看分钟数</span>
+                    <div class="stat-value simple">
+                      <span>{{ userPortrait.behaviorStatistics.nightWatchMinutes }}分钟</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
         </div>
@@ -194,7 +239,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { avatarUrl, recommendApi, filterApi } from '@/services/api'
+import { avatarUrl, recommendApi, filterApi, userApi } from '@/services/api'
 import Card from '../components/Card.vue'
 
 export default {
@@ -216,14 +261,20 @@ export default {
     const userPortrait = ref({
       loading: false,
       error: null,
-      interests: [], // 兴趣标签
-      activeTimeSlots: [], // 活跃时间段
-      mostActiveTime: '', // 最活跃时段
-      dailyActiveHours: 0, // 平均每日活跃时长
-      videoTypes: [], // 偏好视频类型
-      averageVideoDuration: 0, // 平均视频时长
-      averageCompletionRate: 0, // 观看完成率
-      favoriteUp: [] // 关注的UP主偏好
+      categoryDistribution: {}, // 分类分布
+      themeDistribution: {}, // 主题分布
+      favoriteUp: [], // 关注的UP主偏好
+      favoriteVideos: [], // 收藏视频
+      behaviorStatistics: { // 行为统计
+        likeRate: 0, // 点赞率
+        coinRate: 0, // 投币率
+        favoriteRate: 0, // 收藏率
+        shareRate: 0, // 分享率
+        totalWatchHours: 0, // 总观看时长
+        activeDays: 0, // 活跃天数
+        nightWatchDays: 0, // 夜间观看天数
+        nightWatchMinutes: 0 // 夜间观看分钟数
+      }
     })
 
     // 获取活跃度颜色
@@ -243,151 +294,104 @@ export default {
       userPortrait.value.error = null
 
       try {
-        // 整合现有API构建个人画像数据
+        // 使用新的用户完整画像API
+        const userProfile = await userApi.getUserProfile(userId)
 
-        // 1. 获取用户兴趣标签（从分类推荐和主题推荐API获取）
-        const [categoryRecommend, themeRecommend] = await Promise.all([
-          recommendApi.category(userId).catch(() => []),
-          recommendApi.theme(userId).catch(() => [])
-        ])
+        // 转换数据结构为现有的userPortrait格式
 
-        // 合并并去重兴趣标签
-        const interestMap = new Map()
+        // 1. 分类分布和主题分布
+        const categoryDistribution = userProfile.categoryDistribution || {}
+        const themeDistribution = userProfile.themeDistribution || {}
 
-        // 处理分类推荐作为兴趣标签
-        categoryRecommend.forEach(item => {
-          if (item.commonCategories) {
-            item.commonCategories.forEach(category => {
-              if (!interestMap.has(category)) {
-                interestMap.set(category, { id: `cat-${category}`, name: category, score: Math.random() * 0.5 + 0.5 })
-              }
-            })
-          }
-        })
-
-        // 处理主题推荐作为兴趣标签
-        themeRecommend.forEach(item => {
-          if (item.commonThemes) {
-            item.commonThemes.forEach(theme => {
-              if (!interestMap.has(theme)) {
-                interestMap.set(theme, { id: `theme-${theme}`, name: theme, score: Math.random() * 0.5 + 0.5 })
-              }
-            })
-          }
-        })
-
-        // 转换为数组并按分数排序
-        const interests = Array.from(interestMap.values())
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 10) // 最多显示10个标签
-
-        // 2. 获取用户活跃时间模式
+        // 2. 活跃时间模式
         let activeTimeSlots = []
         let mostActiveTime = ''
         let dailyActiveHours = 0
 
-        try {
-          // 从夜猫子筛选API获取夜间活跃信息
-          const nightOwlData = await filterApi.nightOwl({ option: 1 })
-          if (nightOwlData && nightOwlData.length > 0) {
-            // 假设返回的数据包含活跃时间
-            const userData = nightOwlData.find(item => item.userId === userId)
-            if (userData && userData.usualActiveHours) {
-              // 处理活跃时间段数据
-              const timeSlots = [
-                { time: '00:00-04:00', activity: 0 },
-                { time: '04:00-08:00', activity: 0 },
-                { time: '08:00-12:00', activity: 0 },
-                { time: '12:00-16:00', activity: 0 },
-                { time: '16:00-20:00', activity: 0 },
-                { time: '20:00-24:00', activity: 0 }
-              ]
+        if (userProfile.behaviorStatistics) {
+          // 计算每日平均活跃时长（总观看时长/活跃天数）
+          const { totalWatchHours, activeDays } = userProfile.behaviorStatistics
+          dailyActiveHours = activeDays > 0 ? totalWatchHours / activeDays : 0
 
-              // 设置夜间活跃时段
-              if (userData.usualActiveHours.includes('22:00-24:00') || userData.usualActiveHours.includes('00:00-02:00')) {
-                timeSlots[0].activity = 0.8
-                timeSlots[5].activity = 0.9
-                mostActiveTime = '20:00-24:00'
-              } else {
-                // 默认白天活跃
-                timeSlots[2].activity = 0.7
-                timeSlots[3].activity = 0.8
-                mostActiveTime = '08:00-16:00'
-              }
-
-              activeTimeSlots = timeSlots
-              dailyActiveHours = Math.random() * 5 + 3 // 3-8小时随机
-            }
+          // 判断最活跃时段（根据夜间观看分钟数）
+          const { nightWatchMinutes } = userProfile.behaviorStatistics
+          if (nightWatchMinutes > 360) { // 超过6小时
+            mostActiveTime = '夜猫子型'
+          } else if (nightWatchMinutes > 180) { // 超过3小时
+            mostActiveTime = '混合型'
+          } else {
+            mostActiveTime = '早起型'
           }
-        } catch (error) {
-          console.log('获取活跃时间失败，使用默认值:', error)
-          // 设置默认活跃时间
-          activeTimeSlots = [
-            { time: '00:00-04:00', activity: 0.3 },
-            { time: '04:00-08:00', activity: 0.2 },
-            { time: '08:00-12:00', activity: 0.7 },
-            { time: '12:00-16:00', activity: 0.8 },
-            { time: '16:00-20:00', activity: 0.6 },
-            { time: '20:00-24:00', activity: 0.5 }
-          ]
-          mostActiveTime = '08:00-16:00'
-          dailyActiveHours = 5
+
+          // 简单模拟活跃时间段
+          if (nightWatchMinutes > 180) {
+            activeTimeSlots = ['20:00-22:00', '22:00-00:00', '00:00-02:00']
+          } else {
+            activeTimeSlots = ['08:00-10:00', '12:00-14:00', '18:00-20:00']
+          }
         }
 
-        // 3. 获取视频观看偏好
+        // 3. 视频观看偏好
         let videoTypes = []
         let averageVideoDuration = 0
         let averageCompletionRate = 0
 
-        // 从分类推荐获取视频类型偏好
-        if (categoryRecommend && categoryRecommend.length > 0) {
-          videoTypes = Array.from(new Set(categoryRecommend.flatMap(item => item.commonCategories || [])))
+        // 从分类分布获取视频类型偏好
+        if (userProfile.categoryDistribution) {
+          videoTypes = Object.keys(userProfile.categoryDistribution)
         }
 
-        if (videoTypes.length === 0) {
-          videoTypes = ['科技', '游戏', '音乐'] // 默认类型
+        // 模拟视频时长和完成率
+        if (userProfile.behaviorStatistics) {
+          // 随机生成一些合理的数值
+          averageVideoDuration = Math.floor(Math.random() * 30) + 5 // 5-35分钟
+          averageCompletionRate = Math.random() * 0.5 + 0.4 // 40%-90%
         }
 
-        averageVideoDuration = Math.floor(Math.random() * 30 + 10) // 10-40分钟随机
-        averageCompletionRate = Math.random() * 0.4 + 0.5 // 50%-90%随机
-
-        // 4. 获取关注UP主偏好
+        // 4. 关注UP主偏好
         let favoriteUp = []
 
-        try {
-          // 从共同UP主推荐获取
-          const commonUpData = await recommendApi.commonUp(userId).catch(() => [])
-          if (commonUpData && commonUpData.length > 0) {
-            favoriteUp = commonUpData.slice(0, 5).map((item, index) => ({
-              id: `up-${index + 1}`,
-              name: item.username || `UP主${index + 1}`,
-              avatar: item.avatar || '',
-              fansCount: Math.floor(Math.random() * 1000000 + 100000),
-              engagementScore: Math.random() * 0.5 + 0.5
+        if (userProfile.followedUps && userProfile.followedUps.length > 0) {
+          favoriteUp = userProfile.followedUps.slice(0, 5).map((up, idx) => ({
+            id: up.upId || `up-${idx}`,
+            name: up.username || '未知UP主',
+            avatar: up.avatarPath || ''
+          }))
+        }
+
+        // 5. 收藏视频
+        let favoriteVideos = []
+
+        if (userProfile.favoriteVideos) {
+          favoriteVideos = Object.entries(userProfile.favoriteVideos)
+            .slice(0, 10) // 最多显示10个
+            .map(([videoId, title]) => ({
+              id: videoId,
+              title
             }))
-          }
-        } catch (error) {
-          console.log('获取UP主偏好失败，使用默认值:', error)
-          // 默认UP主数据
-          favoriteUp = [
-            { id: 'up-1', name: '科技达人', avatar: '', fansCount: 500000, engagementScore: 0.8 },
-            { id: 'up-2', name: '游戏玩家', avatar: '', fansCount: 800000, engagementScore: 0.75 },
-            { id: 'up-3', name: '音乐爱好者', avatar: '', fansCount: 300000, engagementScore: 0.6 }
-          ]
+        }
+
+        // 6. 行为统计
+        const behaviorStatistics = {
+          likeRate: userProfile.behaviorStatistics?.likeRate || 0,
+          coinRate: userProfile.behaviorStatistics?.coinRate || 0,
+          favoriteRate: userProfile.behaviorStatistics?.favoriteRate || 0,
+          shareRate: userProfile.behaviorStatistics?.shareRate || 0,
+          totalWatchHours: userProfile.behaviorStatistics?.totalWatchHours || 0,
+          activeDays: userProfile.behaviorStatistics?.activeDays || 0,
+          nightWatchDays: userProfile.behaviorStatistics?.nightWatchDays || 0,
+          nightWatchMinutes: userProfile.behaviorStatistics?.nightWatchMinutes || 0
         }
 
         // 更新个人画像数据
         userPortrait.value = {
           ...userPortrait.value,
           loading: false,
-          interests,
-          activeTimeSlots,
-          mostActiveTime,
-          dailyActiveHours,
-          videoTypes,
-          averageVideoDuration,
-          averageCompletionRate,
-          favoriteUp
+          categoryDistribution,
+          themeDistribution,
+          favoriteUp,
+          favoriteVideos,
+          behaviorStatistics
         }
       } catch (error) {
         userPortrait.value.loading = false
@@ -1077,6 +1081,100 @@ export default {
   font-size: 14px;
   font-weight: 600;
   color: var(--primary-color);
+}
+
+/* 收藏视频 */
+.favorite-videos {
+  padding: 15px;
+}
+
+.video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.video-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #fafafa;
+  border-radius: var(--border-radius);
+  transition: all 0.3s;
+}
+
+.video-item:hover {
+  background-color: #f0f0f0;
+  transform: translateX(5px);
+}
+
+.video-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.video-id {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 行为统计 */
+.behavior-stats {
+  padding: 15px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.stat-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-bar {
+  flex: 1;
+  height: 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  background-color: var(--primary-color);
+  border-radius: 5px;
+}
+
+.stat-percent {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 14px;
+  min-width: 50px;
+  text-align: right;
+}
+
+.stat-value.simple {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
 /* 加载和错误状态 */

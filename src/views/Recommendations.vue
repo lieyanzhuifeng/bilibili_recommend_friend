@@ -1,42 +1,297 @@
 <template>
   <div class="recommendations-container">
-    <h1 class="page-title">用户推荐系统</h1>
+    <div class="main-layout">
+      <!-- 侧边栏 -->
+      <aside class="sidebar">
+        <h3 class="sidebar-title">筛选条件</h3>
+        <div class="sidebar-section">
+          <h4 class="section-title">用户活跃度</h4>
+          <div class="slider-group">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              v-model.number="activityLevel"
+              class="slider-input"
+            >
+            <div class="slider-value">{{ activityLevel }}%</div>
+            <div class="slider-labels">
+              <span>低</span>
+              <span>中</span>
+              <span>高</span>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <h4 class="section-title">夜猫子程度</h4>
+          <div class="slider-group">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              v-model.number="nightOwlLevel"
+              class="slider-input"
+            >
+            <div class="slider-value">{{ nightOwlLevel }}%</div>
+            <div class="slider-labels">
+              <span>轻度</span>
+              <span>中度</span>
+              <span>重度</span>
+            </div>
+          </div>
+        </div>
+      </aside>
 
-    <!-- API选择按钮区域 -->
-    <div class="api-buttons">
-      <button
-        v-for="api in recommendApis"
-        :key="api.key"
-        class="api-button"
-        :class="{ active: selectedApis.includes(api.key) }"
-        @click="toggleApiSelection(api.key)"
-      >
-        {{ api.name }}
-      </button>
-    </div>
+      <!-- 主内容区域 -->
+      <main class="main-content">
+        <h1 class="page-title">用户推荐系统</h1>
 
-    <!-- 获取推荐按钮 -->
-    <div class="action-section">
-      <button
-        class="fetch-button"
-        :disabled="selectedApis.length === 0 || loading"
-        @click="fetchRecommendations"
-      >
-        {{ loading ? '获取中...' : '获取推荐' }}
-      </button>
+    <!-- 推荐API选择区域 -->
+    <div class="recommend-api-section">
+      <h2 class="section-title">责任链推荐</h2>
 
-      <div v-if="selectedApis.length > 0" class="selected-count">
-        已选择 {{ selectedApis.length }} 个推荐来源
+      <!-- 推荐API选择按钮 -->
+      <div class="recommend-api-buttons">
+        <button
+          v-for="recommendApi in recommendApis"
+          :key="recommendApi.key"
+          class="recommend-api-button"
+          :class="{ active: selectedRecommendApi === recommendApi.key }"
+          @click="selectRecommendApi(recommendApi.key)"
+        >
+          {{ recommendApi.name }}
+        </button>
       </div>
     </div>
 
+    <!-- 筛选API选择区域 -->
+    <div class="filter-api-section">
+      <h2 class="section-title">筛选条件</h2>
+
+      <!-- 筛选API选择按钮 -->
+      <div class="filter-api-buttons">
+        <button
+          v-for="filterApi in filterApis"
+          :key="filterApi.key"
+          class="filter-api-button"
+          :class="{ active: selectedFilterApis.includes(filterApi.key) }"
+          @click="toggleFilterApiSelection(filterApi.key)"
+        >
+          {{ filterApi.name }}
+        </button>
+      </div>
+
+      <!-- 筛选条件输入区域 -->
+      <div v-if="selectedFilterApis.length > 0" class="filter-conditions">
+        <!-- UP主视频观看比例 -->
+        <div v-if="selectedFilterApis.includes('chainSameUpVideoCount')" class="filter-condition">
+          <label>选择UP主:</label>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.up"
+              @input="debounceFilterSearch('up')"
+              placeholder="搜索UP主"
+              class="search-input"
+            >
+            <div v-if="filterUpSearchResults.length > 0" class="search-results">
+              <div
+                v-for="up in filterUpSearchResults"
+                :key="up.userId"
+                class="search-result-item"
+                @click="selectFilterUp(up)"
+              >
+                {{ up.username }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameUpVideoCount.upName" class="selected-item">
+            {{ filterFormData.chainSameUpVideoCount.upName }}
+            <button @click="removeFilterUp" class="remove-btn">×</button>
+          </div>
+          <div class="ratio-options">
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
+                value="HIGH"
+              >
+              高比例
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
+                value="MEDIUM"
+              >
+              中比例
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameUpVideoCount.ratioOption"
+                value="LOW"
+              >
+              低比例
+            </label>
+          </div>
+        </div>
+
+        <!-- 标签视频观看比例 -->
+        <div v-if="selectedFilterApis.includes('chainSameTagVideoCount')" class="filter-condition">
+          <label>选择标签:</label>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.tag"
+              @input="debounceFilterSearch('tag')"
+              placeholder="搜索标签"
+              class="search-input"
+            >
+            <div v-if="filterTagSearchResults.length > 0" class="search-results">
+              <div
+                v-for="tag in filterTagSearchResults"
+                :key="tag.tagId"
+                class="search-result-item"
+                @click="selectFilterTag(tag)"
+              >
+                {{ tag.tagName }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameTagVideoCount.tagName" class="selected-item">
+            {{ filterFormData.chainSameTagVideoCount.tagName }}
+            <button @click="removeFilterTag" class="remove-btn">×</button>
+          </div>
+          <div class="ratio-options">
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
+                value="HIGH"
+              >
+              高比例
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
+                value="MEDIUM"
+              >
+              中比例
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainSameTagVideoCount.ratioOption"
+                value="LOW"
+              >
+              低比例
+            </label>
+          </div>
+        </div>
+
+        <!-- 深度视频 -->
+        <div v-if="selectedFilterApis.includes('chainDeepVideo')" class="filter-condition">
+          <label>选择视频:</label>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.video"
+              @input="debounceFilterSearch('video')"
+              placeholder="搜索视频"
+              class="search-input"
+            >
+            <div v-if="filterVideoSearchResults.length > 0" class="search-results">
+              <div
+                v-for="video in filterVideoSearchResults"
+                :key="video.videoId"
+                class="search-result-item"
+                @click="selectFilterVideo(video)"
+              >
+                {{ video.title }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainDeepVideo.videoTitle" class="selected-item">
+            {{ filterFormData.chainDeepVideo.videoTitle }}
+            <button @click="removeFilterVideo" class="remove-btn">×</button>
+          </div>
+          <div class="ratio-options">
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainDeepVideo.option"
+                value="HIGH"
+              >
+              高深度
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainDeepVideo.option"
+                value="MEDIUM"
+              >
+              中深度
+            </label>
+            <label>
+              <input
+                type="radio"
+                v-model="filterFormData.chainDeepVideo.option"
+                value="LOW"
+              >
+              低深度
+            </label>
+          </div>
+        </div>
+
+        <!-- 系列作品 -->
+        <div v-if="selectedFilterApis.includes('chainSeries')" class="filter-condition">
+          <label>选择系列标签:</label>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.series"
+              @input="debounceFilterSearch('series')"
+              placeholder="搜索系列标签"
+              class="search-input"
+            >
+            <div v-if="filterSeriesSearchResults.length > 0" class="search-results">
+              <div
+                v-for="series in filterSeriesSearchResults"
+                :key="series.tagId"
+                class="search-result-item"
+                @click="selectFilterSeries(series)"
+              >
+                {{ series.tagName }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSeries.tagName" class="selected-item">
+            {{ filterFormData.chainSeries.tagName }}
+            <button @click="removeFilterSeries" class="remove-btn">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 按钮区域 -->
+    <div class="action-buttons">
+      <button class="filter-btn" @click="applyFilter" :disabled="loading">
+        {{ loading ? '筛选中...' : '应用筛选' }}
+      </button>
+      <button class="recommend-btn" @click="fetchRecommendations" :disabled="loading">
+        {{ loading ? '获取中...' : '获取推荐' }}
+      </button>
+    </div>
+
     <!-- 推荐结果展示区域 -->
-    <div v-if="filteredResults.length > 0" class="results-section">
-      <h2 class="results-title">推荐结果 ({{ filteredResults.length }})</h2>
+    <div v-if="recommendations.length > 0" class="results-section">
+      <h2 class="results-title">推荐结果 ({{ recommendations.length }})</h2>
 
       <div class="user-grid">
         <div
-          v-for="user in filteredResults"
+          v-for="user in recommendations"
           :key="user.userId"
           class="user-card"
           @mouseenter="showTooltip(user, $event)"
@@ -60,7 +315,7 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-else-if="!loading && selectedApis.length > 0" class="empty-state">
+    <div v-else-if="!loading && (selectedRecommendApi || selectedFilterApis.length > 0)" class="empty-state">
       <p>没有找到符合条件的用户推荐</p>
     </div>
 
@@ -93,6 +348,8 @@
         </div>
       </div>
     </div>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -101,7 +358,7 @@ import { ref, computed, onMounted } from 'vue'
 // 移除不存在的store导入
 // import { useRecommendStore } from '@/store/recommend'
 // import { useUserStore } from '@/store/user'
-import { recommendApi, friendApi } from '@/services/api'
+import { recommendApi, friendApi, searchApi, filterApi } from '@/services/api'
 import { getUserAvatar, generateRandomAvatar } from '../utils/avatar';
 
 // 本地状态管理
@@ -123,6 +380,7 @@ const getCurrentUserId = () => {
 
 // 响应式数据
 const selectedApis = ref([])
+const selectedRecommendApi = ref('')
 const loading = ref(false)
 const message = ref('')
 const messageType = ref('info')
@@ -130,6 +388,72 @@ const tooltipVisible = ref(false)
 const tooltipUser = ref(null)
 const tooltipStyle = ref({})
 const addingFriendId = ref(null)
+
+// 新增的推荐和选中用户数据
+const recommendations = ref([])
+const selectedUsers = ref([])
+
+// 筛选API相关数据
+const filterApis = ref([
+  { key: 'chainSameUpVideoCount', name: 'UP主视频观看比例' },
+  { key: 'chainSameTagVideoCount', name: '标签视频观看比例' },
+  { key: 'chainDeepVideo', name: '深度视频' },
+  { key: 'chainSeries', name: '系列作品' }
+])
+const selectedFilterApis = ref([])
+const filterSearchKeywords = ref({
+  up: '',
+  tag: '',
+  video: '',
+  series: ''
+})
+const filterUpSearchResults = ref([])
+const filterTagSearchResults = ref([])
+const filterVideoSearchResults = ref([])
+const filterSeriesSearchResults = ref([])
+const filterFormData = ref({
+  chainSameUpVideoCount: {
+    upId: '',
+    upName: '',
+    ratioOption: 'HIGH'
+  },
+  chainSameTagVideoCount: {
+    tagId: '',
+    tagName: '',
+    ratioOption: 'HIGH'
+  },
+  chainDeepVideo: {
+    videoId: '',
+    videoTitle: '',
+    option: 'HIGH'
+  },
+  chainSeries: {
+    tagId: '',
+    tagName: ''
+  }
+})
+
+// 搜索相关数据
+const searchKeywords = ref({ up: '', tag: '', video: '', series: '' })
+const upSearchResults = ref([])
+const tagSearchResults = ref([])
+const videoSearchResults = ref([])
+const seriesSearchResults = ref([])
+const searchTimeout = ref(null)
+
+// 选中的筛选条件
+const selectedUps = ref([])
+const selectedTags = ref([])
+const selectedVideos = ref([])
+const selectedSeries = ref([])
+
+// 侧边栏筛选条件（轮轴控制）
+const activityLevel = ref(50) // 初始值设为中间值50%
+const nightOwlLevel = ref(50) // 初始值设为中间值50%
+
+// 二次筛选结果
+const secondaryFilterResults = ref([])
+const secondaryFilterApplied = ref(false)
 
 // 头像生成函数已从utils/avatar.js导入
 
@@ -158,9 +482,15 @@ const filteredResults = computed(() => {
   })
 
   // 计算用户ID的交集
-  const intersection = userIdSets.reduce((a, b) => {
+  let intersection = userIdSets.reduce((a, b) => {
     return new Set([...a].filter(x => b.has(x)))
   })
+
+  // 如果应用了二次筛选，取与二次筛选结果的交集
+  if (secondaryFilterApplied.value && secondaryFilterResults.value.length > 0) {
+    const secondaryFilterUserIdSet = new Set(secondaryFilterResults.value.map(user => user.userId))
+    intersection = new Set([...intersection].filter(id => secondaryFilterUserIdSet.has(id)))
+  }
 
   // 合并交集中用户的所有信息
   const mergedUsers = []
@@ -192,67 +522,418 @@ const filteredResults = computed(() => {
   return mergedUsers.sort((a, b) => getHighestSimilarity(b) - getHighestSimilarity(a))
 })
 
-// 切换API选择
-function toggleApiSelection(apiKey) {
-  const index = selectedApis.value.indexOf(apiKey)
+// 选择推荐API
+function selectRecommendApi(apiKey) {
+  selectedRecommendApi.value = apiKey
+}
+
+// 切换筛选API选择
+function toggleFilterApiSelection(filterApiKey) {
+  const index = selectedFilterApis.value.indexOf(filterApiKey)
   if (index > -1) {
-    selectedApis.value.splice(index, 1)
+    selectedFilterApis.value.splice(index, 1)
   } else {
-    selectedApis.value.push(apiKey)
+    selectedFilterApis.value.push(filterApiKey)
   }
 }
 
-// 获取推荐数据
-async function fetchRecommendations() {
-  if (selectedApis.value.length === 0) {
-    showMessage('请至少选择一个推荐来源', 'warning')
+// 筛选搜索防抖
+const filterSearchDebounce = {}
+function debounceFilterSearch(type) {
+  if (filterSearchDebounce[type]) {
+    clearTimeout(filterSearchDebounce[type])
+  }
+
+  filterSearchDebounce[type] = setTimeout(async () => {
+    const keyword = filterSearchKeywords.value[type]
+    if (!keyword) {
+      if (type === 'up') filterUpSearchResults.value = []
+      if (type === 'tag') filterTagSearchResults.value = []
+      if (type === 'video') filterVideoSearchResults.value = []
+      if (type === 'series') filterSeriesSearchResults.value = []
+      return
+    }
+
+    try {
+      let results = []
+      if (type === 'up') {
+        const response = await searchApi.searchUsers(keyword, 'up')
+        results = response.data || []
+        filterUpSearchResults.value = results
+      } else if (type === 'tag') {
+        const response = await searchApi.searchTags(keyword)
+        results = response.data || []
+        filterTagSearchResults.value = results
+      } else if (type === 'video') {
+        const response = await searchApi.searchVideos(keyword)
+        results = response.data || []
+        filterVideoSearchResults.value = results
+      } else if (type === 'series') {
+        const response = await searchApi.searchTags(keyword)
+        results = response.data || []
+        filterSeriesSearchResults.value = results
+      }
+    } catch (error) {
+      console.error(`搜索${type}失败:`, error)
+    }
+  }, 300)
+}
+
+// 选择筛选UP主
+function selectFilterUp(up) {
+  filterFormData.value.chainSameUpVideoCount.upId = up.upId
+  filterFormData.value.chainSameUpVideoCount.upName = up.upName
+  filterSearchKeywords.value.up = up.upName
+  filterUpSearchResults.value = []
+}
+
+// 选择筛选标签
+function selectFilterTag(tag) {
+  filterFormData.value.chainSameTagVideoCount.tagId = tag.tagId
+  filterFormData.value.chainSameTagVideoCount.tagName = tag.tagName
+  filterSearchKeywords.value.tag = tag.tagName
+  filterTagSearchResults.value = []
+}
+
+// 选择筛选视频
+function selectFilterVideo(video) {
+  filterFormData.value.chainDeepVideo.videoId = video.videoId
+  filterFormData.value.chainDeepVideo.videoTitle = video.videoTitle
+  filterSearchKeywords.value.video = video.videoTitle
+  filterVideoSearchResults.value = []
+}
+
+// 选择筛选系列
+function selectFilterSeries(series) {
+  filterFormData.value.chainSeries.tagId = series.tagId
+  filterFormData.value.chainSeries.tagName = series.tagName
+  filterSearchKeywords.value.series = series.tagName
+  filterSeriesSearchResults.value = []
+}
+
+// 应用筛选
+async function applyFilter() {
+  loading.value = true
+  try {
+    // 构建筛选参数
+    const filterParams = {
+      userId: getCurrentUserId(),
+      activityLevel: activityLevel.value,
+      nightOwlLevel: nightOwlLevel.value,
+      filterChain: []
+    }
+
+    // 添加选中的筛选API参数
+    if (selectedFilterApis.value.includes('chainSameUpVideoCount')) {
+      const upData = filterFormData.value.chainSameUpVideoCount
+      if (upData.upId) {
+        filterParams.filterChain.push({
+          type: 'chainSameUpVideoCount',
+          upId: upData.upId,
+          ratioOption: upData.ratioOption
+        })
+      }
+    }
+
+    if (selectedFilterApis.value.includes('chainSameTagVideoCount')) {
+      const tagData = filterFormData.value.chainSameTagVideoCount
+      if (tagData.tagId) {
+        filterParams.filterChain.push({
+          type: 'chainSameTagVideoCount',
+          tagId: tagData.tagId,
+          ratioOption: tagData.ratioOption
+        })
+      }
+    }
+
+    if (selectedFilterApis.value.includes('chainDeepVideo')) {
+      const videoData = filterFormData.value.chainDeepVideo
+      if (videoData.videoId) {
+        filterParams.filterChain.push({
+          type: 'chainDeepVideo',
+          videoId: videoData.videoId,
+          option: videoData.option
+        })
+      }
+    }
+
+    if (selectedFilterApis.value.includes('chainSeries')) {
+      const seriesData = filterFormData.value.chainSeries
+      if (seriesData.tagId) {
+        filterParams.filterChain.push({
+          type: 'chainSeries',
+          tagId: seriesData.tagId
+        })
+      }
+    }
+
+    // 调用筛选API
+    const response = await filterApi.filterByChain(filterParams)
+    if (response.success) {
+      // 筛选结果直接用于推荐数据
+      recommendations.value = response.data || []
+      showMessage('筛选成功', 'success')
+    } else {
+      showMessage(response.message || '筛选失败', 'error')
+    }
+  } catch (error) {
+    console.error('筛选失败:', error)
+    showMessage('筛选失败，请稍后重试', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 搜索防抖函数
+function debounceSearch(type) {
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+  }
+
+  searchTimeout.value = setTimeout(async () => {
+    const keyword = searchKeywords.value[type]
+    if (keyword.trim() === '') {
+      type === 'up' ? upSearchResults.value = [] :
+      type === 'tag' ? tagSearchResults.value = [] :
+      type === 'video' ? videoSearchResults.value = [] :
+      seriesSearchResults.value = []
+      return
+    }
+
+    try {
+      if (type === 'up') {
+        const results = await searchApi.searchUps(keyword)
+        upSearchResults.value = results.data || []
+      } else if (type === 'tag') {
+        const results = await searchApi.searchTags(keyword)
+        tagSearchResults.value = results.data || []
+      } else if (type === 'video') {
+        const results = await searchApi.searchVideos(keyword)
+        videoSearchResults.value = results.data || []
+      } else if (type === 'series') {
+        const results = await searchApi.searchTags(keyword)
+        seriesSearchResults.value = results.data || []
+      }
+    } catch (error) {
+      console.error(`搜索${type}失败:`, error)
+      showMessage(`搜索${type}失败，请稍后重试`, 'error')
+    }
+  }, 500)
+}
+
+// 选择UP主
+function selectUp(up) {
+  if (!selectedUps.value.some(u => u.upId === up.upId)) {
+    selectedUps.value.push(up)
+  }
+  searchKeywords.value.up = ''
+  upSearchResults.value = []
+}
+
+// 移除UP主
+function removeUp(upId) {
+  selectedUps.value = selectedUps.value.filter(up => up.upId !== upId)
+}
+
+// 选择标签
+function selectTag(tag) {
+  if (!selectedTags.value.some(t => t.tagId === tag.tagId)) {
+    selectedTags.value.push(tag)
+  }
+  searchKeywords.value.tag = ''
+  tagSearchResults.value = []
+}
+
+// 移除标签
+function removeTag(tagId) {
+  selectedTags.value = selectedTags.value.filter(tag => tag.tagId !== tagId)
+}
+
+// 选择视频
+function selectVideo(video) {
+  if (!selectedVideos.value.some(v => v.videoId === video.videoId)) {
+    selectedVideos.value.push(video)
+  }
+  searchKeywords.value.video = ''
+  videoSearchResults.value = []
+}
+
+// 移除视频
+function removeVideo(videoId) {
+  selectedVideos.value = selectedVideos.value.filter(video => video.videoId !== videoId)
+}
+
+// 选择系列标签
+function selectSeries(tag) {
+  if (!selectedSeries.value.some(t => t.tagId === tag.tagId)) {
+    selectedSeries.value.push(tag)
+  }
+  searchKeywords.value.series = ''
+  seriesSearchResults.value = []
+}
+
+// 移除系列标签
+function removeSeries(tagId) {
+  selectedSeries.value = selectedSeries.value.filter(tag => tag.tagId !== tagId)
+}
+
+// 获取责任链筛选参数
+function getChainParams() {
+  const params = []
+
+  // UP主视频观看比例
+  if (selectedUps.value.length > 0) {
+    const upParams = {
+      type: 'upWatchRatio',
+      params: {
+        upIds: selectedUps.value.map(up => up.upId)
+      }
+    }
+    params.push(upParams)
+  }
+
+  // 标签视频观看比例
+  if (selectedTags.value.length > 0) {
+    const tagParams = {
+      type: 'tagWatchRatio',
+      params: {
+        tagIds: selectedTags.value.map(tag => tag.tagId)
+      }
+    }
+    params.push(tagParams)
+  }
+
+  // 深度视频
+  if (selectedVideos.value.length > 0) {
+    const videoParams = {
+      type: 'deepVideo',
+      params: {
+        videoIds: selectedVideos.value.map(video => video.videoId)
+      }
+    }
+    params.push(videoParams)
+  }
+
+  // 系列作品
+  if (selectedSeries.value.length > 0) {
+    const seriesParams = {
+      type: 'seriesWorks',
+      params: {
+        tagIds: selectedSeries.value.map(series => series.tagId)
+      }
+    }
+    params.push(seriesParams)
+  }
+
+  return params
+}
+
+// 应用二次筛选
+async function applySecondaryFilter() {
+  if (selectedUps.value.length === 0 && selectedTags.value.length === 0 &&
+      selectedVideos.value.length === 0 && selectedSeries.value.length === 0) {
+    showMessage('请至少选择一个筛选条件', 'warning')
     return
   }
 
   loading.value = true
-  message.value = ''
 
-  // 获取当前用户ID
-  const currentUserId = getCurrentUserId()
-  if (!currentUserId) {
-    showMessage('无法获取用户ID，请先登录', 'error')
+  try {
+    // 获取筛选参数
+    const params = getChainParams()
+
+    // 调用筛选API
+    const response = await filterApi.filterByChain(params)
+
+    // 处理响应结果
+    secondaryFilterResults.value = response.data || []
+    secondaryFilterApplied.value = true
+
+    if (secondaryFilterResults.value.length > 0) {
+      showMessage(`成功应用二次筛选，筛选结果包含 ${secondaryFilterResults.value.length} 位用户`, 'success')
+    } else {
+      showMessage('二次筛选没有找到符合条件的用户', 'info')
+    }
+  } catch (error) {
+    console.error('二次筛选失败:', error)
+    showMessage('二次筛选失败，请稍后重试', 'error')
+  } finally {
     loading.value = false
+  }
+}
+
+// 重置二次筛选条件
+function resetSecondaryFilter() {
+  // 重置搜索
+  searchKeywords.value = { up: '', tag: '', video: '', series: '' }
+  upSearchResults.value = []
+  tagSearchResults.value = []
+  videoSearchResults.value = []
+  seriesSearchResults.value = []
+
+  // 重置选中的筛选条件
+  selectedUps.value = []
+  selectedTags.value = []
+  selectedVideos.value = []
+  selectedSeries.value = []
+
+  // 重置二次筛选结果
+  secondaryFilterResults.value = []
+  secondaryFilterApplied.value = false
+
+  showMessage('二次筛选条件已重置', 'info')
+}
+
+// 获取推荐
+async function fetchRecommendations() {
+  if (!selectedRecommendApi.value) {
+    showMessage('请选择一个推荐API', 'warning')
     return
   }
 
+  loading.value = true
+  message.value = '正在获取推荐用户...'
+
   try {
-    // 创建API请求数组
-    const fetchPromises = selectedApis.value.map(async apiKey => {
-      try {
-        // 使用recommendApi调用实际的API
-        const response = await recommendApi[apiKey](currentUserId)
-        // 确保返回的数据是数组格式
-        const results = Array.isArray(response) ? response : (response.results || response.data || [])
-        apiResults.value[apiKey] = results
-      } catch (err) {
-        console.error(`获取${apiKey}推荐数据失败:`, err)
-        // 出错时使用空数组，确保后续流程可以继续
-        apiResults.value[apiKey] = []
-      }
-    })
+    // 构建请求参数
+    const params = {
+      userId: getCurrentUserId()
+    }
 
-    // 等待所有请求完成
-    await Promise.all(fetchPromises)
+    // 调用责任链推荐API
+    let response = null
+    switch (selectedRecommendApi.value) {
+      case 'coComment':
+        response = await recommendApi.coComment(params)
+        break
+      case 'reply':
+        response = await recommendApi.reply(params)
+        break
+      case 'sharedVideo':
+        response = await recommendApi.sharedVideo(params)
+        break
+      case 'category':
+        response = await recommendApi.category(params)
+        break
+      case 'theme':
+        response = await recommendApi.theme(params)
+        break
+      case 'favoriteSimilarity':
+        response = await recommendApi.favoriteSimilarity(params)
+        break
+      case 'commentFriends':
+        response = await recommendApi.commentFriends(params)
+        break
+      default:
+        showMessage('未知的推荐API', 'error')
+        return
+    }
 
-    // 检查是否有有效的推荐结果
-    let hasResults = false
-    selectedApis.value.forEach(apiKey => {
-      if (apiResults.value[apiKey] && apiResults.value[apiKey].length > 0) {
-        hasResults = true
-      }
-    })
-
-    if (!hasResults) {
-      showMessage('没有找到推荐用户，请尝试选择其他推荐来源', 'info')
-    } else if (filteredResults.value.length === 0) {
-      showMessage('没有找到共同匹配的用户，各推荐来源之间无交集', 'info')
+    if (response.success) {
+      recommendations.value = response.data || []
+      showMessage('推荐获取成功', 'success')
     } else {
-      showMessage(`成功找到 ${filteredResults.value.length} 个匹配用户`, 'success')
+      showMessage(response.message || '获取推荐失败', 'error')
     }
   } catch (error) {
     console.error('获取推荐失败:', error)
@@ -541,6 +1222,217 @@ onMounted(() => {
   position: relative;
 }
 
+/* 主布局 */
+.main-layout {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+  width: 280px;
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h3 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+/* 侧边栏选项组 */
+.sidebar-options {
+  margin-bottom: 20px;
+}
+
+.sidebar-options h4 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+/* 主内容区域 */
+.main-content {
+  flex: 1;
+}
+
+/* 筛选API部分 */
+.filter-api-section {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-api-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-api-button {
+  padding: 10px 18px;
+  background-color: #f0f0f0;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.filter-api-button:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.filter-api-button.active {
+  background-color: #4682b4;
+  color: white;
+  border-color: #36648b;
+}
+
+/* 筛选表单 */
+.filter-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.filter-form {
+  background-color: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-form-title {
+  font-size: 1rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.form-field {
+  margin-bottom: 15px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.form-select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+/* 推荐API部分 */
+.recommend-api-section {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recommend-api-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.recommend-api-button {
+  padding: 10px 18px;
+  background-color: #f0f0f0;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.recommend-api-button:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.recommend-api-button.active {
+  background-color: #9370db;
+  color: white;
+  border-color: #7b68ee;
+}
+
+/* 行动按钮 */
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-btn, .recommend-btn {
+  padding: 14px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-btn {
+  background-color: #4682b4;
+  color: white;
+}
+
+.filter-btn:hover:not(:disabled) {
+  background-color: #36648b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(70, 130, 180, 0.3);
+}
+
+.recommend-btn {
+  background-color: #ff69b4;
+  color: white;
+}
+
+.recommend-btn:hover:not(:disabled) {
+  background-color: #ff1493;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+.filter-btn:disabled, .recommend-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .page-title {
   font-size: 2.5rem;
   color: #333;
@@ -614,6 +1506,192 @@ onMounted(() => {
 .selected-count {
   font-size: 14px;
   color: #666;
+}
+
+/* 搜索框样式 */
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4682b4;
+  box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.1);
+}
+
+/* 搜索结果列表 */
+.search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: white;
+  margin-bottom: 10px;
+}
+
+.search-result-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.search-result-item:hover {
+  background-color: #f5f5f5;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+/* 比例选项 */
+.ratio-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ratio-option {
+  padding: 6px 12px;
+  border: 2px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.ratio-option:hover {
+  border-color: #4682b4;
+}
+
+.ratio-option.active {
+  background-color: #4682b4;
+  color: white;
+  border-color: #4682b4;
+}
+
+/* 用户网格 */
+.user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.user-card {
+  background-color: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.user-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border: 2px solid #ff69b4;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* 滑块样式 */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.slider-input {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ff69b4, #ff1493);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff1493;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff1493;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider-value {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ff69b4;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .filter-forms {
+    grid-template-columns: 1fr;
+  }
+
+  .user-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+  }
 }
 
 .results-section {
@@ -824,6 +1902,164 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* 二次筛选区域样式 */
+.secondary-filter-section {
+  background-color: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.filter-group {
+  margin-bottom: 25px;
+}
+
+.filter-title {
+  font-size: 1.1rem;
+  color: #555;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #ff69b4;
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.search-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.search-item:hover {
+  background-color: #f5f5f5;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffe4f0;
+  color: #ff1493;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 2px solid #ff69b4;
+}
+
+.tag-remove {
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ff69b4;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.tag-remove:hover {
+  background-color: #ff1493;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.apply-filter-btn {
+  padding: 10px 20px;
+  background-color: #ff69b4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.apply-filter-btn:hover:not(:disabled) {
+  background-color: #ff1493;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+.apply-filter-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.reset-filter-btn {
+  padding: 10px 20px;
+  background-color: #f0f0f0;
+  color: #666;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.reset-filter-btn:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .api-buttons {
@@ -845,6 +2081,15 @@ onMounted(() => {
   .tooltip {
     max-width: 250px;
     font-size: 13px;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+  }
+
+  .apply-filter-btn,
+  .reset-filter-btn {
+    width: 100%;
   }
 }
 </style>

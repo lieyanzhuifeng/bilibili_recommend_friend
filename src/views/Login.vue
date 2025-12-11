@@ -61,56 +61,41 @@ export default {
 
       this.loading = true;
       try {
-        // 首先尝试调用真实登录API
+        // 调用真实登录API
         console.log('准备调用登录API')
-        let response = null;
-        let userData = null;
+        const response = await loginApi.login({ userId: this.userId })
+        console.log('登录API返回数据:', response)
 
-        try {
-            response = await loginApi.login({ userId: this.userId })
-            console.log('登录API返回数据:', response)
-
-            // 根据API文档，响应数据包含success、data、message字段
-            if (response && response.success && response.data) {
-              // API调用成功，使用API返回的用户数据
-              userData = {
-                ...response.data,
-                avatar: response.data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${response.data.username || this.userId}`,
-                token: `mock-token-${Date.now()}`,
-                userId: response.data.userId || this.userId,
-                username: response.data.username || `用户${this.userId}`
-              };
-            } else {
-              throw new Error('API返回数据格式不正确');
-            }
-        } catch (apiError) {
-          console.log('API调用失败，使用本地模拟登录:', apiError.message)
-          // API调用失败，使用本地模拟登录
-          userData = {
-            userId: this.userId,
-            username: `用户${this.userId}`,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.userId}`,
-            token: `mock-token-${Date.now()}`,
-            lastLogin: new Date().toISOString()
+        // 根据API文档，响应数据包含success、data、message字段
+        if (response && response.success && response.data) {
+          // API调用成功，使用API返回的用户数据
+          const userData = {
+            ...response.data,
+            avatar: response.data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${response.data.username || this.userId}`,
+            token: response.data.token || `mock-token-${Date.now()}`,
+            userId: response.data.userId || this.userId,
+            username: response.data.username || `用户${this.userId}`
           };
+
+          console.log('使用用户数据:', userData)
+
+          // 保存用户信息到store
+          this.userStore.setUserInfo(userData)
+
+          // 同时保存到localStorage
+          localStorage.setItem('user', JSON.stringify(userData))
+          localStorage.setItem('token', userData.token)
+
+          console.log('用户信息已保存，准备跳转')
+          // 跳转到个人主页
+          this.$router.push('/profile');
+        } else {
+          throw new Error(response?.message || '登录失败，请检查用户ID是否正确');
         }
-
-        console.log('使用用户数据:', userData)
-
-        // 保存用户信息到store
-        this.userStore.setUserInfo(userData)
-
-        // 同时保存到localStorage
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('token', userData.token)
-
-        console.log('用户信息已保存，准备跳转')
-        // 跳转到个人主页
-        this.$router.push('/profile');
       } catch (error) {
         console.error('登录失败:', error)
-        // 显示详细错误信息
-        alert(`登录失败: ${error.message || '未知错误'}\n状态码: ${error.status || 'N/A'}`)
+        // 显示错误信息
+        alert(`登录失败: ${error.message || '未知错误'}`)
       } finally {
         console.log('登录流程结束')
         this.loading = false;
