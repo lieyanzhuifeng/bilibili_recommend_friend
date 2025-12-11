@@ -261,7 +261,10 @@ export const recommendApi = {
   category: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/category/${userId}`, { activity, nightOwl }),
   theme: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/theme/${userId}`, { activity, nightOwl }),
   favoriteSimilarity: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/favorite-similarity/${userId}`, { activity, nightOwl }),
-  commentFriends: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/comment-friends/${userId}`, { activity, nightOwl })
+  commentFriends: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/comment-friends/${userId}`, { activity, nightOwl }),
+  // 添加新的推荐API
+  userBehavior: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/user-behavior/${userId}`, { activity, nightOwl }),
+  commonUp: ({ userId, activity, nightOwl } = {}) => get(`/api/chain/common-up/${userId}`, { activity, nightOwl })
 }
 
 export const filterApi = {
@@ -279,6 +282,9 @@ export const filterApi = {
   series: ({ tagId } = {}) => get('/api/filter/series', { tagId }),
 
   // 责任链相关API（按照API2.md文档）
+  chainSameUp: ({ upId, durationOption, ...params } = {}) => get('/api/chain/same-up', { upId, durationOption, ...params }),
+  chainSameTag: ({ tagId, durationOption, ...params } = {}) => get('/api/chain/same-tag', { tagId, durationOption, ...params }),
+  chainFollowTime: ({ userId, upId, ...params } = {}) => get('/api/chain/follow-time', { userId, upId, ...params }),
   chainSameUpVideoCount: (body, params = {}) => post(`/api/chain/same-up-video-count${buildQuery(params)}`, body),
   chainSameTagVideoCount: ({ tagId, ratioOption, ...params } = {}) => get('/api/chain/same-tag-video-count', { tagId, ratioOption, ...params }),
   chainDeepVideo: ({ videoId, option, ...params } = {}) => get('/api/chain/deep-video', { videoId, option, ...params }),
@@ -294,7 +300,9 @@ export const searchApi = {
   // 搜索标签
   searchTags: (keyword) => get('/api/users/tags/search', { keyword }),
   // 搜索UP主
-  searchUps: (keyword) => get('/api/users/search', { keyword })
+  searchUps: (keyword) => get('/api/users/search', { keyword }),
+  // 搜索用户（适配筛选条件中的调用）
+  searchUsers: (keyword) => get('/api/users/search', { keyword })
 }
 
 // 登录相关API

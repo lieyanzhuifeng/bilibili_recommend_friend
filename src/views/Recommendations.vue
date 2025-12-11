@@ -89,9 +89,13 @@
 
       <!-- 筛选条件输入区域 -->
       <div v-if="selectedFilterApis.length > 0" class="filter-conditions">
+        <div class="filter-tip">提示：选择多个筛选条件可以组合使用，更精准地找到符合要求的用户</div>
         <!-- UP主视频观看比例 -->
         <div v-if="selectedFilterApis.includes('chainSameUpVideoCount')" class="filter-condition">
-          <label>选择UP主:</label>
+          <div class="filter-condition-header">
+            <label>UP主视频观看比例</label>
+            <div class="filter-condition-desc">筛选和您观看同一UP主视频比例相近的用户</div>
+          </div>
           <div class="search-input-group">
             <input
               type="text"
@@ -145,7 +149,10 @@
 
         <!-- 标签视频观看比例 -->
         <div v-if="selectedFilterApis.includes('chainSameTagVideoCount')" class="filter-condition">
-          <label>选择标签:</label>
+          <div class="filter-condition-header">
+            <label>标签视频观看比例</label>
+            <div class="filter-condition-desc">筛选和您观看同一标签视频比例相近的用户</div>
+          </div>
           <div class="search-input-group">
             <input
               type="text"
@@ -199,7 +206,10 @@
 
         <!-- 深度视频 -->
         <div v-if="selectedFilterApis.includes('chainDeepVideo')" class="filter-condition">
-          <label>选择视频:</label>
+          <div class="filter-condition-header">
+            <label>深度视频</label>
+            <div class="filter-condition-desc">筛选和您观看同一视频深度相近的用户</div>
+          </div>
           <div class="search-input-group">
             <input
               type="text"
@@ -253,7 +263,10 @@
 
         <!-- 系列作品 -->
         <div v-if="selectedFilterApis.includes('chainSeries')" class="filter-condition">
-          <label>选择系列标签:</label>
+          <div class="filter-condition-header">
+            <label>系列作品</label>
+            <div class="filter-condition-desc">筛选和您观看同一系列作品的用户</div>
+          </div>
           <div class="search-input-group">
             <input
               type="text"
@@ -401,10 +414,13 @@ const selectedUsers = ref([])
 
 // 筛选API相关数据
 const filterApis = ref([
+  { key: 'chainSameUp', name: '同一UP主筛选' },
+  { key: 'chainSameTag', name: '同一标签筛选' },
   { key: 'chainSameUpVideoCount', name: 'UP主视频观看比例' },
   { key: 'chainSameTagVideoCount', name: '标签视频观看比例' },
-  { key: 'chainDeepVideo', name: '深度视频' },
-  { key: 'chainSeries', name: '系列作品' }
+  { key: 'chainFollowTime', name: '关注时间缘分' },
+  { key: 'chainDeepVideo', name: '深度视频筛选' },
+  { key: 'chainSeries', name: '系列作品筛选' }
 ])
 const selectedFilterApis = ref([])
 const filterSearchKeywords = ref({
@@ -418,6 +434,16 @@ const filterTagSearchResults = ref([])
 const filterVideoSearchResults = ref([])
 const filterSeriesSearchResults = ref([])
 const filterFormData = ref({
+  chainSameUp: {
+    upId: '',
+    upName: '',
+    durationOption: -1
+  },
+  chainSameTag: {
+    tagId: '',
+    tagName: '',
+    durationOption: -1
+  },
   chainSameUpVideoCount: {
     upId: '',
     upName: '',
@@ -427,6 +453,10 @@ const filterFormData = ref({
     tagId: '',
     tagName: '',
     ratioOption: 'HIGH'
+  },
+  chainFollowTime: {
+    upId: '',
+    upName: ''
   },
   chainDeepVideo: {
     videoId: '',
@@ -465,13 +495,15 @@ const secondaryFilterApplied = ref(false)
 
 // API配置
 const recommendApis = [
-  { key: 'coComment', name: '同视频评论推荐', endpoint: '/api/recommend/co-comment/' },
-  { key: 'reply', name: '评论回复推荐', endpoint: '/api/recommend/reply/' },
-  { key: 'sharedVideo', name: '共同分享视频推荐', endpoint: '/api/recommend/shared-video/' },
-  { key: 'category', name: '分类偏好推荐', endpoint: '/api/recommend/category/' },
-  { key: 'theme', name: '主题偏好推荐', endpoint: '/api/recommend/theme/' },
-  { key: 'favoriteSimilarity', name: '收藏相似度推荐', endpoint: '/api/recommend/favorite-similarity/' },
-  { key: 'commentFriends', name: '评论好友推荐', endpoint: '/api/recommend/comment-friends/' }
+  { key: 'coComment', name: '同视频评论推荐', endpoint: '/api/chain/co-comment/' },
+  { key: 'reply', name: '评论回复推荐', endpoint: '/api/chain/reply/' },
+  { key: 'sharedVideo', name: '视频相似度推荐', endpoint: '/api/chain/shared-video/' },
+  { key: 'category', name: '分区重合度推荐', endpoint: '/api/chain/category/' },
+  { key: 'theme', name: '内容类型重合度推荐', endpoint: '/api/chain/theme/' },
+  { key: 'userBehavior', name: '用户行为相似度推荐', endpoint: '/api/chain/user-behavior/' },
+  { key: 'commonUp', name: '共同关注UP主推荐', endpoint: '/api/chain/common-up/' },
+  { key: 'favoriteSimilarity', name: '收藏夹相似度推荐', endpoint: '/api/chain/favorite-similarity/' },
+  { key: 'commentFriends', name: '通过评论推荐好友', endpoint: '/api/chain/comment-friends/' }
 ]
 
 // 存储所有API的结果
@@ -617,6 +649,38 @@ function selectFilterSeries(series) {
   filterSeriesSearchResults.value = []
 }
 
+// 移除筛选UP主
+function removeFilterUp() {
+  filterFormData.value.chainSameUpVideoCount.upId = ''
+  filterFormData.value.chainSameUpVideoCount.upName = ''
+  filterSearchKeywords.value.up = ''
+  filterUpSearchResults.value = []
+}
+
+// 移除筛选标签
+function removeFilterTag() {
+  filterFormData.value.chainSameTagVideoCount.tagId = ''
+  filterFormData.value.chainSameTagVideoCount.tagName = ''
+  filterSearchKeywords.value.tag = ''
+  filterTagSearchResults.value = []
+}
+
+// 移除筛选视频
+function removeFilterVideo() {
+  filterFormData.value.chainDeepVideo.videoId = ''
+  filterFormData.value.chainDeepVideo.videoTitle = ''
+  filterSearchKeywords.value.video = ''
+  filterVideoSearchResults.value = []
+}
+
+// 移除筛选系列
+function removeFilterSeries() {
+  filterFormData.value.chainSeries.tagId = ''
+  filterFormData.value.chainSeries.tagName = ''
+  filterSearchKeywords.value.series = ''
+  filterSeriesSearchResults.value = []
+}
+
 // 应用筛选
 async function applyFilter() {
   loading.value = true
@@ -630,6 +694,38 @@ async function applyFilter() {
     }
 
     // 添加选中的筛选API参数
+    if (selectedFilterApis.value.includes('chainSameUp')) {
+      const upData = filterFormData.value.chainSameUp
+      if (upData.upId) {
+        filterParams.filterChain.push({
+          type: 'chainSameUp',
+          upId: upData.upId,
+          durationOption: upData.durationOption
+        })
+      }
+    }
+
+    if (selectedFilterApis.value.includes('chainSameTag')) {
+      const tagData = filterFormData.value.chainSameTag
+      if (tagData.tagId) {
+        filterParams.filterChain.push({
+          type: 'chainSameTag',
+          tagId: tagData.tagId,
+          durationOption: tagData.durationOption
+        })
+      }
+    }
+
+    if (selectedFilterApis.value.includes('chainFollowTime')) {
+      const upData = filterFormData.value.chainFollowTime
+      if (upData.upId) {
+        filterParams.filterChain.push({
+          type: 'chainFollowTime',
+          upId: upData.upId
+        })
+      }
+    }
+
     if (selectedFilterApis.value.includes('chainSameUpVideoCount')) {
       const upData = filterFormData.value.chainSameUpVideoCount
       if (upData.upId) {
@@ -932,6 +1028,12 @@ async function fetchRecommendations() {
       case 'commentFriends':
         response = await recommendApi.commentFriends(params)
         break
+      case 'userBehavior':
+        response = await recommendApi.userBehavior(params)
+        break
+      case 'commonUp':
+        response = await recommendApi.commonUp(params)
+        break
       default:
         showMessage('未知的推荐API', 'error')
         return
@@ -951,14 +1053,14 @@ async function fetchRecommendations() {
     if (response.success !== undefined) {
       if (response.success) {
         console.log('推荐数据:', response.data)
-        
+
         // 尝试多种方式提取用户数据
         let userData = response.data || []
         if (!Array.isArray(userData) && userData.users) {
           userData = userData.users
           console.log('从response.data.users提取用户数据:', userData)
         }
-        
+
         recommendations.value = userData || []
       } else {
         console.log('API请求失败:', response.message)
@@ -979,16 +1081,16 @@ async function fetchRecommendations() {
       showMessage('获取推荐失败，API响应格式未知', 'error')
       return
     }
-    
+
     console.log('recommendations数组:', recommendations.value)
     console.log('recommendations数组长度:', recommendations.value.length)
-    
+
     // 检查第一个用户对象的结构
     if (recommendations.value.length > 0) {
       console.log('第一个用户对象:', recommendations.value[0])
       console.log('用户对象属性:', Object.keys(recommendations.value[0]))
     }
-    
+
     showMessage('推荐获取成功', 'success')
   } catch (error) {
     console.error('获取推荐失败:', error)
@@ -1578,6 +1680,55 @@ onMounted(() => {
   outline: none;
   border-color: #4682b4;
   box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.1);
+}
+
+/* 筛选条件样式 */
+.filter-conditions {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+.filter-tip {
+  background-color: #e8f4fd;
+  color: #3366cc;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  border-left: 3px solid #3366cc;
+}
+
+.filter-condition {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-condition:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.filter-condition-header {
+  margin-bottom: 10px;
+}
+
+.filter-condition-header label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.filter-condition-desc {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 10px;
 }
 
 /* 搜索结果列表 */
