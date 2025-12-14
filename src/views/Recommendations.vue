@@ -6,45 +6,43 @@
         <h3 class="sidebar-title">筛选条件</h3>
         <div class="sidebar-section">
           <h4 class="section-title">用户活跃度</h4>
-          <div class="slider-group">
-            <input
-              type="range"
-              min="0"
-              max="7"
-              step="1"
-              v-model.number="activity"
-              class="slider-input"
-            >
-            <div class="slider-value">{{ activity }} (0-7, 0表示不筛选)</div>
-            <div class="slider-labels">
-              <span>不筛选(0)</span>
-              <span>低</span>
-              <span>中</span>
-              <span>高</span>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="activity-1" v-model="activityOptions" value="1" class="radio-input" @change="calculateActivity">
+              <label for="activity-1" class="radio-label">轻度活跃</label>
             </div>
-            <div class="slider-tip">提示：0表示不筛选，1-7表示活跃度逐渐增加</div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="activity-2" v-model="activityOptions" value="2" class="radio-input" @change="calculateActivity">
+              <label for="activity-2" class="radio-label">中度活跃</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="activity-3" v-model="activityOptions" value="3" class="radio-input" @change="calculateActivity">
+              <label for="activity-3" class="radio-label">重度活跃</label>
+            </div>
           </div>
+          <!-- <div class="filter-value-info">当前组合值: {{ activity }} (0-7)</div> -->
         </div>
         <div class="sidebar-section">
           <h4 class="section-title">夜猫子程度</h4>
-          <div class="slider-group">
-            <input
-              type="range"
-              min="0"
-              max="15"
-              step="1"
-              v-model.number="nightOwl"
-              class="slider-input"
-            >
-            <div class="slider-value">{{ nightOwl }} (0-15, 0表示不筛选)</div>
-            <div class="slider-labels">
-              <span>不筛选(0)</span>
-              <span>轻度</span>
-              <span>中度</span>
-              <span>重度</span>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="nightOwl-1" value="1" v-model="nightOwlOptions" class="radio-input" @change="calculateNightOwl">
+              <label for="nightOwl-1" class="radio-label">非夜猫子</label>
             </div>
-            <div class="slider-tip">提示：0表示不筛选，1-15表示夜猫子程度逐渐增加</div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="nightOwl-2" value="2" v-model="nightOwlOptions" class="radio-input" @change="calculateNightOwl">
+              <label for="nightOwl-2" class="radio-label">轻度夜猫子</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="nightOwl-3" value="3" v-model="nightOwlOptions" class="radio-input" @change="calculateNightOwl">
+              <label for="nightOwl-3" class="radio-label">中度夜猫子</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="nightOwl-4" value="4" v-model="nightOwlOptions" class="radio-input" @change="calculateNightOwl">
+              <label for="nightOwl-4" class="radio-label">重度夜猫子</label>
+            </div>
           </div>
+          <!-- <div class="filter-value-info">当前组合值: {{ nightOwl }} (0-15)</div> -->
         </div>
       </aside>
 
@@ -54,7 +52,7 @@
 
     <!-- 推荐API选择区域 -->
     <div class="recommend-api-section">
-      <h2 class="section-title">责任链推荐</h2>
+      <h2 class="section-title">推荐</h2>
 
       <!-- 推荐API选择按钮 -->
       <div class="recommend-api-buttons">
@@ -556,6 +554,61 @@ const selectedSeries = ref([])
 // 侧边栏筛选条件（轮轴控制）
 const activity = ref(0) // 初始值设为0，表示不筛选
 const nightOwl = ref(0) // 初始值设为0，表示不筛选
+
+// 存储多选选项
+const activityOptions = ref([]) // 存储用户活跃度多选选项
+const nightOwlOptions = ref([]) // 存储夜猫子指数多选选项
+
+// 计算用户活跃度组合值
+function calculateActivity() {
+  // 转换为数字数组
+  const options = activityOptions.value.map(Number).sort()
+
+  // 如果没有选择任何选项，默认不筛选
+  if (options.length === 0) {
+    activity.value = 0
+    return
+  }
+
+  // 组合计算规则
+  if (options.length === 1) {
+    // 单个选项，直接使用对应的值
+    activity.value = options[0]
+  } else if (options.length === 2) {
+    // 两个选项的组合
+    if (options.includes(1) && options.includes(2)) {
+      activity.value = 4 // 轻度或中度
+    } else if (options.includes(2) && options.includes(3)) {
+      activity.value = 5 // 中度或重度
+    } else if (options.includes(1) && options.includes(3)) {
+      activity.value = 6 // 轻度或重度
+    }
+  } else if (options.length === 3) {
+    // 三个选项都选了，对应全部活跃用户
+    activity.value = 7
+  }
+}
+
+// 计算夜猫子指数组合值
+function calculateNightOwl() {
+  // 转换为数字数组
+  const options = nightOwlOptions.value.map(Number).sort()
+
+  // 如果没有选择任何选项，默认不筛选
+  if (options.length === 0) {
+    nightOwl.value = 0
+    return
+  }
+
+  // 组合计算规则
+  if (options.length === 1) {
+    // 单个选项，直接使用对应的值
+    nightOwl.value = options[0]
+  } else if (options.length >= 2 && options.length <= 4) {
+    // 选择了多个时间段，对应全部夜猫子类型
+    nightOwl.value = 15
+  }
+}
 
 // 二次筛选结果
 const secondaryFilterResults = ref([])
@@ -2161,7 +2214,53 @@ onMounted(() => {
   color: #888;
   font-style: italic;
   text-align: center;
-}/* 响应式设计 */
+}
+
+/* 多选按钮组样式 */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.radio-input {
+  margin-right: 10px;
+  width: 16px;
+  height: 16px;
+  accent-color: #ff69b4;
+}
+
+.radio-label {
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.checkbox-item:hover .radio-label {
+  color: #ff69b4;
+}
+
+/* 筛选值信息样式 */
+.filter-value-info {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #4682b4;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
   .main-layout {
     flex-direction: column;

@@ -150,7 +150,6 @@
                 <div class="video-list">
                   <div v-for="video in userPortrait.favoriteVideos" :key="video.id" class="video-item">
                     <div class="video-title">{{ video.title }}</div>
-                    <div class="video-id">视频ID: {{ video.id }}</div>
                   </div>
                 </div>
               </div>
