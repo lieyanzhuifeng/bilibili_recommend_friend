@@ -123,15 +123,14 @@
             <input
               type="range"
               id="sameUpVideoRatio"
-              v-model="filterFormData.chainSameUpVideoCount.ratioValue"
-              min="1"
-              max="3"
+              v-model="filterFormData.chainSameUpVideoCount.ratioOption"
+              min="0"
+              max="4"
               step="1"
               class="slider"
               title="拖动滑块选择观看比例"
-              @input="updateRatioOption('chainSameUpVideoCount')"
             >
-            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameUpVideoCount.ratioValue) }}</div>
+            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameUpVideoCount.ratioOption) }}</div>
           </div>
         </div>
 
@@ -170,15 +169,14 @@
             <input
               type="range"
               id="sameTagVideoRatio"
-              v-model="filterFormData.chainSameTagVideoCount.ratioValue"
-              min="1"
-              max="3"
+              v-model="filterFormData.chainSameTagVideoCount.ratioOption"
+              min="0"
+              max="4"
               step="1"
               class="slider"
               title="拖动滑块选择观看比例"
-              @input="updateRatioOption('chainSameTagVideoCount')"
             >
-            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameTagVideoCount.ratioValue) }}</div>
+            <div class="slider-value">{{ formatRatioOption(filterFormData.chainSameTagVideoCount.ratioOption) }}</div>
           </div>
         </div>
 
@@ -213,19 +211,142 @@
             <button @click="removeFilterVideo" class="remove-btn" title="移除选中的视频">×</button>
           </div>
           <div class="slider-container">
-            <label for="deepVideoRatio" class="slider-label">观看深度:</label>
+            <label for="deepVideoOption" class="slider-label">观看深度:</label>
             <input
               type="range"
-              id="deepVideoRatio"
-              v-model="filterFormData.chainDeepVideo.ratioValue"
-              min="1"
-              max="3"
+              id="deepVideoOption"
+              v-model="filterFormData.chainDeepVideo.option"
+              min="0"
+              max="1"
               step="1"
               class="slider"
               title="拖动滑块选择观看深度"
-              @input="updateRatioOption('chainDeepVideo')"
             >
-            <div class="slider-value">{{ formatRatioOption(filterFormData.chainDeepVideo.ratioValue) }}</div>
+            <div class="slider-value">{{ formatDeepVideoOption(filterFormData.chainDeepVideo.option) }}</div>
+          </div>
+        </div>
+
+        <!-- 同一UP主筛选 -->
+        <div v-if="selectedFilterApis.includes('chainSameUp')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>同一UP主筛选</label>
+            <div class="filter-condition-desc">筛选关注同一UP主的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.up"
+              @input="debounceFilterSearch('up')"
+              placeholder="搜索UP主"
+              class="search-input"
+              title="输入UP主名称进行模糊搜索"
+            >
+            <div v-if="filterUpSearchResults.length > 0" class="search-results">
+              <div
+                v-for="up in filterUpSearchResults"
+                :key="up.userId"
+                class="search-result-item"
+                @click="selectFilterUp(up)"
+              >
+                {{ up.username }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameUp.upName" class="selected-item">
+            {{ filterFormData.chainSameUp.upName }}
+            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
+          </div>
+          <div class="slider-container">
+            <label for="sameUpDuration" class="slider-label">观看时长:</label>
+            <input
+              type="range"
+              id="sameUpDuration"
+              v-model="filterFormData.chainSameUp.durationOption"
+              min="-1"
+              max="4"
+              step="1"
+              class="slider"
+              title="拖动滑块选择观看时长"
+            >
+            <div class="slider-value">{{ formatDurationOption(filterFormData.chainSameUp.durationOption) }}</div>
+          </div>
+        </div>
+
+        <!-- 同一标签筛选 -->
+        <div v-if="selectedFilterApis.includes('chainSameTag')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>同一标签筛选</label>
+            <div class="filter-condition-desc">筛选关注同一标签的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.tag"
+              @input="debounceFilterSearch('tag')"
+              placeholder="搜索标签"
+              class="search-input"
+              title="输入标签名称进行模糊搜索"
+            >
+            <div v-if="filterTagSearchResults.length > 0" class="search-results">
+              <div
+                v-for="tag in filterTagSearchResults"
+                :key="tag.tagId"
+                class="search-result-item"
+                @click="selectFilterTag(tag)"
+              >
+                {{ tag.tagName }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainSameTag.tagName" class="selected-item">
+            {{ filterFormData.chainSameTag.tagName }}
+            <button @click="removeFilterTag" class="remove-btn" title="移除选中的标签">×</button>
+          </div>
+          <div class="slider-container">
+            <label for="sameTagDuration" class="slider-label">观看时长:</label>
+            <input
+              type="range"
+              id="sameTagDuration"
+              v-model="filterFormData.chainSameTag.durationOption"
+              min="-1"
+              max="4"
+              step="1"
+              class="slider"
+              title="拖动滑块选择观看时长"
+            >
+            <div class="slider-value">{{ formatDurationOption(filterFormData.chainSameTag.durationOption) }}</div>
+          </div>
+        </div>
+
+        <!-- 关注时间缘分推荐 -->
+        <div v-if="selectedFilterApis.includes('chainFollowTime')" class="filter-condition">
+          <div class="filter-condition-header">
+            <label>关注时间缘分推荐</label>
+            <div class="filter-condition-desc">筛选在相近时间关注同一UP主的用户</div>
+          </div>
+          <div class="search-input-group">
+            <input
+              type="text"
+              v-model="filterSearchKeywords.up"
+              @input="debounceFilterSearch('up')"
+              placeholder="搜索UP主"
+              class="search-input"
+              title="输入UP主名称进行模糊搜索"
+            >
+            <div v-if="filterUpSearchResults.length > 0" class="search-results">
+              <div
+                v-for="up in filterUpSearchResults"
+                :key="up.userId"
+                class="search-result-item"
+                @click="selectFilterUp(up)"
+              >
+                {{ up.username }}
+              </div>
+            </div>
+          </div>
+          <div v-if="filterFormData.chainFollowTime.upName" class="selected-item">
+            {{ filterFormData.chainFollowTime.upName }}
+            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
           </div>
         </div>
 
@@ -258,102 +379,6 @@
           <div v-if="filterFormData.chainSeries.tagName" class="selected-item">
             {{ filterFormData.chainSeries.tagName }}
             <button @click="removeFilterSeries" class="remove-btn" title="移除选中的系列标签">×</button>
-          </div>
-        </div>
-
-        <!-- 同一UP主 -->
-        <div v-if="selectedFilterApis.includes('chainSameUp')" class="filter-condition">
-          <div class="filter-condition-header">
-            <label>同一UP主</label>
-            <div class="filter-condition-desc">筛选和您观看同一UP主视频的用户</div>
-          </div>
-          <div class="search-input-group">
-            <input
-              type="text"
-              v-model="filterSearchKeywords.up"
-              @input="debounceFilterSearch('up')"
-              placeholder="搜索UP主"
-              class="search-input"
-              title="输入UP主名称进行模糊搜索"
-            >
-            <div v-if="filterUpSearchResults.length > 0" class="search-results">
-              <div
-                v-for="up in filterUpSearchResults"
-                :key="up.userId"
-                class="search-result-item"
-                @click="selectFilterUp(up)"
-              >
-                {{ up.username }}
-              </div>
-            </div>
-          </div>
-          <div v-if="filterFormData.chainSameUp.upName" class="selected-item">
-            {{ filterFormData.chainSameUp.upName }}
-            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
-          </div>
-        </div>
-
-        <!-- 同一标签 -->
-        <div v-if="selectedFilterApis.includes('chainSameTag')" class="filter-condition">
-          <div class="filter-condition-header">
-            <label>同一标签</label>
-            <div class="filter-condition-desc">筛选和您观看同一标签视频的用户</div>
-          </div>
-          <div class="search-input-group">
-            <input
-              type="text"
-              v-model="filterSearchKeywords.tag"
-              @input="debounceFilterSearch('tag')"
-              placeholder="搜索标签"
-              class="search-input"
-              title="输入标签名称进行模糊搜索"
-            >
-            <div v-if="filterTagSearchResults.length > 0" class="search-results">
-              <div
-                v-for="tag in filterTagSearchResults"
-                :key="tag.tagId"
-                class="search-result-item"
-                @click="selectFilterTag(tag)"
-              >
-                {{ tag.tagName }}
-              </div>
-            </div>
-          </div>
-          <div v-if="filterFormData.chainSameTag.tagName" class="selected-item">
-            {{ filterFormData.chainSameTag.tagName }}
-            <button @click="removeFilterTag" class="remove-btn" title="移除选中的标签">×</button>
-          </div>
-        </div>
-
-        <!-- 关注时间缘分 -->
-        <div v-if="selectedFilterApis.includes('chainFollowTime')" class="filter-condition">
-          <div class="filter-condition-header">
-            <label>关注时间缘分</label>
-            <div class="filter-condition-desc">筛选和您关注同一UP主时间相近的用户</div>
-          </div>
-          <div class="search-input-group">
-            <input
-              type="text"
-              v-model="filterSearchKeywords.up"
-              @input="debounceFilterSearch('up')"
-              placeholder="搜索UP主"
-              class="search-input"
-              title="输入UP主名称进行模糊搜索"
-            >
-            <div v-if="filterUpSearchResults.length > 0" class="search-results">
-              <div
-                v-for="up in filterUpSearchResults"
-                :key="up.userId"
-                class="search-result-item"
-                @click="selectFilterUp(up)"
-              >
-                {{ up.username }}
-              </div>
-            </div>
-          </div>
-          <div v-if="filterFormData.chainFollowTime.upName" class="selected-item">
-            {{ filterFormData.chainFollowTime.upName }}
-            <button @click="removeFilterUp" class="remove-btn" title="移除选中的UP主">×</button>
           </div>
         </div>
       </div>
@@ -502,24 +527,24 @@ const filterFormData = ref({
   chainSameUp: {
     upId: '',
     upName: '',
-    durationOption: -1
+    durationOption: -1 // -1: 不限制时长, 0: 0-1小时, 1: 1-3小时, 2: 3-10小时, 3: 10-30小时, 4: 30小时以上
   },
   chainSameTag: {
     tagId: '',
     tagName: '',
-    durationOption: -1
+    durationOption: -1 // -1: 不限制时长, 0: 0-1小时, 1: 1-3小时, 2: 3-10小时, 3: 10-30小时, 4: 30小时以上
   },
   chainSameUpVideoCount: {
     upId: '',
     upName: '',
-    ratioOption: 'HIGH',
-    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
+    ratioOption: 2, // 0: 0-20%, 1: 20-40%, 2: 40-60%, 3: 60-80%, 4: 80-100%
+    ratioValue: 2
   },
   chainSameTagVideoCount: {
     tagId: '',
     tagName: '',
-    ratioOption: 'HIGH',
-    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
+    ratioOption: 2, // 0: 0-20%, 1: 20-40%, 2: 40-60%, 3: 60-80%, 4: 80-100%
+    ratioValue: 2
   },
   chainFollowTime: {
     upId: '',
@@ -528,8 +553,8 @@ const filterFormData = ref({
   chainDeepVideo: {
     videoId: '',
     videoTitle: '',
-    option: 'HIGH',
-    ratioValue: 3 // 1: LOW, 2: MEDIUM, 3: HIGH
+    option: 0, // 0: 深度观看(≥5次或≥2倍时长), 1: 极其深度观看(≥10次或≥5倍时长)
+    ratioValue: 0
   },
   chainSeries: {
     tagId: '',
@@ -617,33 +642,38 @@ const secondaryFilterApplied = ref(false)
 // 头像生成函数已从utils/avatar.js导入
 
 // 格式化比例选项
+// 格式化比例选项
 function formatRatioOption(value) {
   const ratioMap = {
-    1: '低比例',
-    2: '中比例',
-    3: '高比例',
-    'LOW': '低比例',
-    'MEDIUM': '中比例',
-    'HIGH': '高比例'
+    0: '0-20%',
+    1: '20-40%',
+    2: '40-60%',
+    3: '60-80%',
+    4: '80-100%'
   }
-  return ratioMap[value] || '中比例'
+  return ratioMap[value] || '40-60%'
 }
 
-// 监听ratioValue变化，自动更新ratioOption或option
-function updateRatioOption(section) {
-  const ratioValue = filterFormData.value[section].ratioValue
-  const ratioMap = {
-    1: 'LOW',
-    2: 'MEDIUM',
-    3: 'HIGH'
+// 格式化时长选项
+function formatDurationOption(value) {
+  const durationMap = {
+    '-1': '不限制时长',
+    0: '0-1小时',
+    1: '1-3小时',
+    2: '3-10小时',
+    3: '10-30小时',
+    4: '30小时以上'
   }
+  return durationMap[value] || '不限制时长'
+}
 
-  // 根据不同的筛选条件使用不同的属性名
-  if (section === 'chainDeepVideo') {
-    filterFormData.value[section].option = ratioMap[ratioValue] || 'MEDIUM'
-  } else {
-    filterFormData.value[section].ratioOption = ratioMap[ratioValue] || 'MEDIUM'
+// 格式化深度视频选项
+function formatDeepVideoOption(value) {
+  const optionMap = {
+    0: '深度观看(≥5次或≥2倍时长)',
+    1: '极其深度观看(≥10次或≥5倍时长)'
   }
+  return optionMap[value] || '深度观看'
 }
 
 // API配置
@@ -906,17 +936,17 @@ async function applyFilter() {
   loading.value = true
   try {
     // 如果只有深度视频筛选条件，直接调用chainDeepVideo API
-    if (selectedFilterApis.value.length === 1 && selectedFilterApis.value.includes('chainDeepVideo')) {
-      const videoData = filterFormData.value.chainDeepVideo
-      if (videoData.videoId) {
-        // 直接调用/api/chain/deep-video接口
-        const response = await filterApi.chainDeepVideo({
-          userId: getCurrentUserId(),
-          videoId: videoData.videoId,
-          option: videoData.option,
-          activity: activity.value,
-          nightOwl: nightOwl.value
-        })
+        if (selectedFilterApis.value.length === 1 && selectedFilterApis.value.includes('chainDeepVideo')) {
+          const videoData = filterFormData.value.chainDeepVideo
+          if (videoData.videoId) {
+            // 直接调用/api/chain/deep-video接口
+            const response = await filterApi.chainDeepVideo({
+              userId: getCurrentUserId(),
+              videoId: videoData.videoId,
+              option: parseInt(videoData.option),
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
 
         // 处理响应结果
         // 检查响应是否为数组（直接返回数据的情况）
@@ -994,15 +1024,13 @@ async function applyFilter() {
         case 'chainSameUpVideoCount':
           const sameUpVideoCountData = filterFormData.value.chainSameUpVideoCount
           if (sameUpVideoCountData.upId) {
-            response = await filterApi.chainSameUpVideoCount(
-              { upId: sameUpVideoCountData.upId },
-              {
-                userId: getCurrentUserId(),
-                ratioOption: sameUpVideoCountData.ratioOption,
-                activity: activity.value,
-                nightOwl: nightOwl.value
-              }
-            )
+            response = await filterApi.chainSameUpVideoCount({
+              userId: getCurrentUserId(),
+              upId: sameUpVideoCountData.upId,
+              ratioOption: parseInt(sameUpVideoCountData.ratioOption),
+              activity: activity.value,
+              nightOwl: nightOwl.value
+            })
           } else {
             showMessage('请先选择一个UP主', 'warning')
             return
@@ -1014,7 +1042,7 @@ async function applyFilter() {
             response = await filterApi.chainSameTagVideoCount({
               userId: getCurrentUserId(),
               tagId: sameTagVideoCountData.tagId,
-              ratioOption: sameTagVideoCountData.ratioOption,
+              ratioOption: parseInt(sameTagVideoCountData.ratioOption),
               activity: activity.value,
               nightOwl: nightOwl.value
             })
