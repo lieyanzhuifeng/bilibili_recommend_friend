@@ -7,6 +7,7 @@ import com.bilibili.rec_system.service.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,29 +19,12 @@ public class CommentBasedFriendRecommendationServiceAdapter implements Recommend
 
     @Override
     public List<BaseDTO> recommendUsers(Long userId) {
-        // 获取队友的服务结果
+        // 直接返回 FriendRecommendationDTO 列表
+        // 由于 FriendRecommendationDTO 应该是 BaseDTO 的子类，这是安全的
         List<FriendRecommendationDTO> friendResults =
                 commentBasedFriendRecommendationService.recommendFriendsByComments(userId);
 
-        // 手动转换为BaseDTO
-        return friendResults.stream()
-                .map(this::convertToBaseDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 将FriendRecommendationDTO转换为BaseDTO
-     */
-    private BaseDTO convertToBaseDTO(FriendRecommendationDTO friendDTO) {
-        if (friendDTO == null || friendDTO.getRecommendedUser() == null) {
-            return new BaseDTO();
-        }
-
-        // 从recommendedUser中提取信息
-        return new BaseDTO(
-                friendDTO.getRecommendedUser().getUserId(),
-                friendDTO.getRecommendedUser().getUsername(),
-                friendDTO.getRecommendedUser().getAvatarPath()
-        );
+        // 直接转换，因为 FriendRecommendationDTO 应该继承 BaseDTO
+        return new ArrayList<BaseDTO>(friendResults);
     }
 }
