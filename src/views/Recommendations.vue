@@ -57,14 +57,14 @@
       <!-- 推荐API选择按钮 -->
       <div class="recommend-api-buttons">
         <button
-          v-for="recommendApi in recommendApis"
-          :key="recommendApi.key"
-          class="recommend-api-button"
-          :class="{ active: selectedRecommendApi === recommendApi.key }"
-          @click="selectRecommendApi(recommendApi.key)"
-        >
-          {{ recommendApi.name }}
-        </button>
+        v-for="recommendApi in recommendApis"
+        :key="recommendApi.key"
+        class="recommend-api-button"
+        :class="{ active: selectedRecommendApi.includes(recommendApi.key) }"
+        @click="toggleRecommendApiSelection(recommendApi.key)"
+      >
+  {{ recommendApi.name }}
+</button>
       </div>
     </div>
 
@@ -386,13 +386,10 @@
 
     <!-- 按钮区域 -->
     <div class="action-buttons">
-      <button class="filter-btn" @click="applyFilter" :disabled="loading">
-        {{ loading ? '筛选中...' : '应用筛选' }}
-      </button>
-      <button class="recommend-btn" @click="fetchRecommendations" :disabled="loading">
-        {{ loading ? '获取中...' : '获取推荐' }}
-      </button>
-    </div>
+  <button class="get-users-btn" @click="fetchUsers" :disabled="loading">
+    {{ loading ? '获取中...' : '获取用户' }}
+  </button>
+</div>
 
     <!-- 推荐结果展示区域 -->
     <div v-if="recommendations.length > 0" class="results-section">
@@ -489,7 +486,7 @@ const getCurrentUserId = () => {
 
 // 响应式数据
 const selectedApis = ref([])
-const selectedRecommendApi = ref('')
+const selectedRecommendApi = ref([])
 const loading = ref(false)
 const message = ref('')
 const messageType = ref('info')
@@ -744,8 +741,13 @@ const filteredResults = computed(() => {
 })
 
 // 选择推荐API
-function selectRecommendApi(apiKey) {
-  selectedRecommendApi.value = apiKey
+function toggleRecommendApiSelection(apiKey) {
+  const index = selectedRecommendApi.value.indexOf(apiKey)
+  if (index > -1) {
+    selectedRecommendApi.value.splice(index, 1)
+  } else {
+    selectedRecommendApi.value.push(apiKey)
+  }
 }
 
 // 切换筛选API选择
@@ -1283,6 +1285,137 @@ function resetSecondaryFilter() {
 }
 
 // 获取推荐
+// 获取用户（合并筛选和推荐功能）
+async function fetchUsers() {
+  // 验证至少选择了一个API
+  if (selectedRecommendApi.value.length === 0 && selectedFilterApis.value.length === 0) {
+    showMessage('请至少选择一个推荐或筛选API', 'warning')
+    return
+  }
+
+  loading.value = true
+  message.value = '正在获取用户...'
+
+  try {
+    // 构建请求参数
+    const params = {
+      userId: getCurrentUserId(),
+      activity: activity.value,
+      nightOwl: nightOwl.value
+    }
+
+    // 收集所有API的结果
+    const allUserIds = []
+    const allUserDetails = {}
+
+    // 调用所有选中的推荐API
+    for (const apiKey of selectedRecommendApi.value) {
+      const response = await recommendApi[apiKey](params)
+      const userIds = extractUserIdsFromResponse(response)
+      allUserIds.push(userIds)
+      extractUserDetailsFromResponse(response, allUserDetails)
+    }
+
+    // 调用所有选中的筛选API（如果需要）
+    // 这里假设applyFilter函数会将筛选结果存储在某个变量中
+    // 您可能需要根据实际情况调整这部分逻辑
+    if (selectedFilterApis.value.length > 0) {
+      await applyFilter()
+      // 假设筛选结果存储在filteredUsers变量中
+      if (filteredUsers && filteredUsers.length > 0) {
+        const filteredUserIds = filteredUsers.map(user => user.userId)
+        allUserIds.push(filteredUserIds)
+      }
+    }
+
+    // 计算用户ID的交集
+    let finalUserIds = []
+    if (allUserIds.length > 0) {
+      // 初始化为第一个API的用户ID
+      finalUserIds = allUserIds[0]
+
+      // 计算所有API结果的交集
+      for (let i = 1; i < allUserIds.length; i++) {
+        finalUserIds = finalUserIds.filter(id => allUserIds[i].includes(id))
+      }
+    }
+
+    // 根据交集的用户ID获取完整的用户信息
+    const finalUsers = finalUserIds.map(userId => allUserDetails[userId]).filter(Boolean)
+
+    // 更新推荐结果
+    recommendations.value = finalUsers
+
+    showMessage(`成功获取${finalUsers.length}个用户`, 'success')
+  } catch (error) {
+    console.error('获取用户失败:', error)
+    showMessage('获取用户失败', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 从API响应中提取用户ID
+function extractUserIdsFromResponse(response) {
+  let userData = []
+
+  // 处理不同的响应格式
+  if (response.success !== undefined) {
+    if (response.success) {
+      userData = response.data || []
+      if (!Array.isArray(userData) && userData.users) {
+        userData = userData.users
+      }
+    }
+  } else if (Array.isArray(response)) {
+    userData = response
+  }
+
+  // 提取用户ID
+  return userData.map(user => {
+    if (user && user.recommendedUser) {
+      return user.recommendedUser.userid || user.recommendedUser.userId
+    }
+    return user.userid || user.userId
+  }).filter(Boolean)
+}
+
+// 从API响应中提取用户详细信息
+function extractUserDetailsFromResponse(response, userDetailsMap) {
+  let userData = []
+
+  // 处理不同的响应格式
+  if (response.success !== undefined) {
+    if (response.success) {
+      userData = response.data || []
+      if (!Array.isArray(userData) && userData.users) {
+        userData = userData.users
+      }
+    }
+  } else if (Array.isArray(response)) {
+    userData = response
+  }
+
+  // 提取用户详细信息
+  userData.forEach(user => {
+    let processedUser = { ...user }
+
+    // 如果存在recommendedUser属性，合并其信息
+    if (user && user.recommendedUser) {
+      Object.keys(user.recommendedUser).forEach(key => {
+        const normalizedKey = key === 'userid' ? 'userId' : key
+        processedUser[normalizedKey] = user.recommendedUser[key]
+      })
+    }
+
+    // 存储用户信息
+    const userId = processedUser.userId || processedUser.userid
+    if (userId) {
+      userDetailsMap[userId] = processedUser
+    }
+  })
+}
+
 async function fetchRecommendations() {
   if (!selectedRecommendApi.value) {
     showMessage('请选择一个推荐API', 'warning')
@@ -2760,5 +2893,24 @@ onMounted(() => {
   .reset-filter-btn {
     width: 100%;
   }
+}
+.get-users-btn {
+  background-color: #409eff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.get-users-btn:hover {
+  background-color: #66b1ff;
+}
+
+.get-users-btn:disabled {
+  background-color: #c6e2ff;
+  cursor: not-allowed;
 }
 </style>
