@@ -157,6 +157,32 @@
             </div>
           </Card>
 
+          <!-- 深度观看视频 -->
+          <Card class="portrait-card" title="深度观看视频">
+            <div class="deep-watched-videos">
+              <div v-if="userPortrait.loading" class="loading">加载中...</div>
+              <div v-else-if="userPortrait.error" class="error">{{ userPortrait.error }}</div>
+              <div v-else-if="userPortrait.deepWatchedVideos.length > 0">
+                <div class="video-list">
+                  <div v-for="video in userPortrait.deepWatchedVideos" :key="video.id" class="video-item">
+                    <div class="video-title">{{ video.title }}</div>
+                    <div class="video-info">
+                      <span class="video-up">
+                        <img :src="avatar({ avatarPath: video.upAvatar })" alt="UP主头像" class="up-avatar-small" />
+                        {{ video.upName }}
+                      </span>
+                      <span class="video-stats">
+                        <span>观看时长: {{ Math.floor(video.totalWatchDuration / 60) }}分钟</span>
+                        <span>观看次数: {{ video.watchCount }}次</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty">暂无深度观看视频数据</div>
+            </div>
+          </Card>
+
           <!-- 行为统计 -->
           <Card class="portrait-card" title="行为统计">
             <div class="behavior-stats">
@@ -264,6 +290,7 @@ export default {
       themeDistribution: {}, // 主题分布
       favoriteUp: [], // 关注的UP主偏好
       favoriteVideos: [], // 收藏视频
+      deepWatchedVideos: [], // 深度观看视频
       behaviorStatistics: { // 行为统计
         likeRate: 0, // 点赞率
         coinRate: 0, // 投币率
@@ -370,7 +397,22 @@ export default {
             }))
         }
 
-        // 6. 行为统计
+        // 6. 深度观看视频
+        let deepWatchedVideos = []
+
+        if (userProfile.deepWatchedVideos && userProfile.deepWatchedVideos.length > 0) {
+          deepWatchedVideos = userProfile.deepWatchedVideos.slice(0, 10).map(video => ({
+            id: video.videoId,
+            title: video.videoTitle,
+            totalWatchDuration: video.totalWatchDuration,
+            watchCount: video.watchCount,
+            upId: video.userId,
+            upName: video.username,
+            upAvatar: video.avatarPath
+          }))
+        }
+
+        // 7. 行为统计
         const behaviorStatistics = {
           likeRate: userProfile.behaviorStatistics?.likeRate || 0,
           coinRate: userProfile.behaviorStatistics?.coinRate || 0,
@@ -390,6 +432,7 @@ export default {
           themeDistribution,
           favoriteUp,
           favoriteVideos,
+          deepWatchedVideos,
           behaviorStatistics
         }
       } catch (error) {
@@ -1114,6 +1157,32 @@ export default {
   margin-bottom: 5px;
 }
 
+.video-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.video-up {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.up-avatar-small {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.video-stats {
+  display: flex;
+  gap: 15px;
+}
+
 .video-id {
   font-size: 12px;
   color: var(--text-secondary);
@@ -1245,3 +1314,6 @@ export default {
   }
 }
 </style>
+
+
+
