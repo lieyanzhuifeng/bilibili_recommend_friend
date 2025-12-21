@@ -934,42 +934,42 @@ function removeFilterSeries() {
 }
 
 // 应用筛选
+// 应用筛选
 async function applyFilter() {
-  loading.value = true
   try {
     // 如果只有深度视频筛选条件，直接调用chainDeepVideo API
-        if (selectedFilterApis.value.length === 1 && selectedFilterApis.value.includes('chainDeepVideo')) {
-          const videoData = filterFormData.value.chainDeepVideo
-          if (videoData.videoId) {
-            // 直接调用/api/chain/deep-video接口
-            const response = await filterApi.chainDeepVideo({
-              userId: getCurrentUserId(),
-              videoId: videoData.videoId,
-              option: parseInt(videoData.option),
-              activity: activity.value,
-              nightOwl: nightOwl.value
-            })
+    if (selectedFilterApis.value.length === 1 && selectedFilterApis.value.includes('chainDeepVideo')) {
+      const videoData = filterFormData.value.chainDeepVideo
+      if (videoData.videoId) {
+        // 直接调用/api/chain/deep-video接口
+        const response = await filterApi.chainDeepVideo({
+          userId: getCurrentUserId(),
+          videoId: videoData.videoId,
+          option: parseInt(videoData.option),
+          activity: activity.value,
+          nightOwl: nightOwl.value
+        })
 
         // 处理响应结果
         // 检查响应是否为数组（直接返回数据的情况）
         if (Array.isArray(response)) {
-          recommendations.value = response
-          showMessage('筛选成功', 'success')
+          return response
         // 检查响应是否包含success属性（标准格式的情况）
         } else if (response.success) {
-          recommendations.value = response.data || []
-          showMessage('筛选成功', 'success')
+          return response.data || []
         } else {
           showMessage(response.message || '筛选失败', 'error')
+          return []
         }
       } else {
         showMessage('请先选择一个视频', 'warning')
+        return []
       }
     } else {
       // 检查是否有选中的筛选条件
       if (selectedFilterApis.value.length === 0) {
         showMessage('请至少选择一个筛选条件', 'warning')
-        return
+        return []
       }
 
       // 对于多个筛选条件，目前只支持一个主要筛选条件
@@ -991,7 +991,7 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个UP主', 'warning')
-            return
+            return []
           }
           break
         case 'chainSameTag':
@@ -1006,7 +1006,7 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个标签', 'warning')
-            return
+            return []
           }
           break
         case 'chainFollowTime':
@@ -1020,7 +1020,7 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个UP主', 'warning')
-            return
+            return []
           }
           break
         case 'chainSameUpVideoCount':
@@ -1035,7 +1035,7 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个UP主', 'warning')
-            return
+            return []
           }
           break
         case 'chainSameTagVideoCount':
@@ -1050,7 +1050,7 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个标签', 'warning')
-            return
+            return []
           }
           break
         case 'chainSeries':
@@ -1064,32 +1064,30 @@ async function applyFilter() {
             })
           } else {
             showMessage('请先选择一个系列标签', 'warning')
-            return
+            return []
           }
           break
         default:
           showMessage('不支持的筛选条件', 'error')
-          return
+          return []
       }
 
       // 处理响应结果
       // 检查响应是否为数组（直接返回数据的情况）
       if (Array.isArray(response)) {
-        recommendations.value = response
-        showMessage('筛选成功', 'success')
+        return response
       // 检查响应是否包含success属性（标准格式的情况）
       } else if (response.success) {
-        recommendations.value = response.data || []
-        showMessage('筛选成功', 'success')
+        return response.data || []
       } else {
         showMessage(response.message || '筛选失败', 'error')
+        return []
       }
     }
   } catch (error) {
     console.error('筛选失败:', error)
     showMessage('筛选失败，请稍后重试', 'error')
-  } finally {
-    loading.value = false
+    return []
   }
 }
 
@@ -1286,6 +1284,7 @@ function resetSecondaryFilter() {
 
 // 获取推荐
 // 获取用户（合并筛选和推荐功能）
+// 获取用户（合并筛选和推荐功能）
 async function fetchUsers() {
   // 验证至少选择了一个API
   if (selectedRecommendApi.value.length === 0 && selectedFilterApis.value.length === 0) {
@@ -1317,14 +1316,38 @@ async function fetchUsers() {
     }
 
     // 调用所有选中的筛选API（如果需要）
-    // 这里假设applyFilter函数会将筛选结果存储在某个变量中
-    // 您可能需要根据实际情况调整这部分逻辑
     if (selectedFilterApis.value.length > 0) {
-      await applyFilter()
-      // 假设筛选结果存储在filteredUsers变量中
-      if (filteredUsers && filteredUsers.length > 0) {
-        const filteredUserIds = filteredUsers.map(user => user.userId)
+      const filteredResults = await applyFilter()
+      if (filteredResults && filteredResults.length > 0) {
+        // 提取筛选结果中的用户ID
+        const filteredUserIds = filteredResults.map(user => {
+          if (user && user.recommendedUser) {
+            return user.recommendedUser.userid || user.recommendedUser.userId
+          }
+          return user.userid || user.userId
+        }).filter(Boolean)
+
         allUserIds.push(filteredUserIds)
+
+        // 提取筛选结果的用户详细信息
+        filteredResults.forEach(user => {
+          if (user && user.recommendedUser) {
+            const userId = user.recommendedUser.userid || user.recommendedUser.userId
+            if (userId) {
+              allUserDetails[userId] = { ...user }
+              // 合并recommendedUser属性
+              Object.keys(user.recommendedUser).forEach(key => {
+                const normalizedKey = key === 'userid' ? 'userId' : key
+                allUserDetails[userId][normalizedKey] = user.recommendedUser[key]
+              })
+            }
+          } else if (user) {
+            const userId = user.userid || user.userId
+            if (userId) {
+              allUserDetails[userId] = user
+            }
+          }
+        })
       }
     }
 
@@ -1354,7 +1377,6 @@ async function fetchUsers() {
     loading.value = false
   }
 }
-
 // 从API响应中提取用户ID
 function extractUserIdsFromResponse(response) {
   let userData = []
