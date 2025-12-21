@@ -1357,6 +1357,23 @@ async function fetchRecommendations() {
           console.log('从response.data.users提取用户数据:', userData)
         }
 
+        // 检查是否存在recommendedUser属性，如果存在则优先使用该对象下的信息
+        if (Array.isArray(userData)) {
+          userData = userData.map(user => {
+            if (user && user.recommendedUser) {
+              const newUser = { ...user }
+              // 将推荐用户的属性合并到主用户对象中
+              Object.keys(user.recommendedUser).forEach(key => {
+                // 如果属性名是userid（小写），则转换为userId（大写）以保持一致性
+                const normalizedKey = key === 'userid' ? 'userId' : key
+                newUser[normalizedKey] = user.recommendedUser[key]
+              })
+              return newUser
+            }
+            return user
+          })
+        }
+
         recommendations.value = userData || []
       } else {
         console.log('API请求失败:', response.message)
@@ -1366,11 +1383,45 @@ async function fetchRecommendations() {
     } else if (Array.isArray(response)) {
       // API直接返回用户数组
       console.log('API直接返回用户数组:', response)
-      recommendations.value = response || []
+      // 检查是否存在recommendedUser属性，如果存在则优先使用该对象下的信息
+      let processedData = response
+      if (Array.isArray(processedData)) {
+        processedData = processedData.map(user => {
+          if (user && user.recommendedUser) {
+            const newUser = { ...user }
+            // 将推荐用户的属性合并到主用户对象中
+            Object.keys(user.recommendedUser).forEach(key => {
+              // 如果属性名是userid（小写），则转换为userId（大写）以保持一致性
+              const normalizedKey = key === 'userid' ? 'userId' : key
+              newUser[normalizedKey] = user.recommendedUser[key]
+            })
+            return newUser
+          }
+          return user
+        })
+      }
+      recommendations.value = processedData || []
     } else if (Array.isArray(response.data)) {
       // API返回的是包含data字段的对象，且data是数组
       console.log('API返回data字段为用户数组:', response.data)
-      recommendations.value = response.data || []
+      // 检查是否存在recommendedUser属性，如果存在则优先使用该对象下的信息
+      let processedData = response.data
+      if (Array.isArray(processedData)) {
+        processedData = processedData.map(user => {
+          if (user && user.recommendedUser) {
+            const newUser = { ...user }
+            // 将推荐用户的属性合并到主用户对象中
+            Object.keys(user.recommendedUser).forEach(key => {
+              // 如果属性名是userid（小写），则转换为userId（大写）以保持一致性
+              const normalizedKey = key === 'userid' ? 'userId' : key
+              newUser[normalizedKey] = user.recommendedUser[key]
+            })
+            return newUser
+          }
+          return user
+        })
+      }
+      recommendations.value = processedData || []
     } else {
       console.log('API响应格式未知:', response)
       recommendations.value = []
