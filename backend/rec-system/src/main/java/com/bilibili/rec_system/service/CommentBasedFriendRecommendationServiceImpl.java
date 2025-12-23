@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
-
+//没有使用adapter时方法的具体实现
 @Slf4j
 @Service
 public class CommentBasedFriendRecommendationServiceImpl implements CommentBasedFriendRecommendationService {

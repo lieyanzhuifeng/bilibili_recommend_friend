@@ -3,7 +3,7 @@ package com.bilibili.rec_system.service;
 import com.bilibili.rec_system.dto.FriendRecommendationDTO;
 
 import java.util.List;
-
+//没有使用adapter的接口
 public interface CommentBasedFriendRecommendationService {
 
     /**

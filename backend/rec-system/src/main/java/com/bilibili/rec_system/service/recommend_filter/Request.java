@@ -11,6 +11,8 @@ import java.util.List;
 /**
  * 推荐请求（对应请假条）
  */
+
+//责任链中的请求类
 @Getter
 @Setter
 public class Request {

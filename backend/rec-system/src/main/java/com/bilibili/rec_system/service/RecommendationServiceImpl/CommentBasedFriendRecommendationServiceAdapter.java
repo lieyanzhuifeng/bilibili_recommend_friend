@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+//adapter实现，具体流程是把输出的数据进行调整，使得符合接口
 @Service
 public class CommentBasedFriendRecommendationServiceAdapter implements RecommendationService {
 

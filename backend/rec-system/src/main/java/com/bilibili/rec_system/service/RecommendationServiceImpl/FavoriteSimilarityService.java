@@ -82,7 +82,7 @@ public class FavoriteSimilarityService implements RecommendationService {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
-
+    //不同的子系统的数据，都向外暴露一个show接口
     public Map<Long, String> show(Long userId) {
         // 获取用户收藏的视频ID列表
         List<Long> favoriteVideoIds = userFavoritesRepository.findVideoIdsByUserId(userId);

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+//handler子类，作为工作流的具体一环
 @Component
 public class UserActivityHandler extends Handler {
 

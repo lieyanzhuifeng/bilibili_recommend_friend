@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+//策略模式的具体实现
 @Service
 public class DeepVideoFilterService implements FilterService {
 
@@ -80,6 +81,7 @@ public class DeepVideoFilterService implements FilterService {
      * @param userId 用户ID
      * @return 深度观看视频的DTO列表
      */
+    //不同的子系统的数据，都向外暴露一个show接口
     public List<DeepVideoRecommendationDTO> show(Long userId) {
         // 假设我们使用 option 0 的深度观看标准：观看次数≥5 或 观看时长≥2倍视频时长
         final int MIN_WATCH_COUNT = 5;

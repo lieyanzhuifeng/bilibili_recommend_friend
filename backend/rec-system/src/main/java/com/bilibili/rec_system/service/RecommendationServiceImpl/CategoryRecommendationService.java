@@ -139,7 +139,7 @@ public class CategoryRecommendationService implements RecommendationService {
         public double getScore() { return score; }
         public List<String> getCommonCategoryNames() { return commonCategoryNames; }
     }
-
+    //子系统show接口的具体实现
     //提供用户画像的组件
     public Map<String, Double> show(Long userId) {
         // 获取用户的分区偏好
