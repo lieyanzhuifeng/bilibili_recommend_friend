@@ -13,6 +13,7 @@ import java.util.Map;
  * 文本相似度（句向量） + 情感惩罚综合评分模块
  * ⭐ 优化版：句向量相似度低时直接返回0，跳过情感分析
  */
+/*单例模式的实现*/
 public enum CommentSimilarityWithSentiment {
     INSTANCE;
 

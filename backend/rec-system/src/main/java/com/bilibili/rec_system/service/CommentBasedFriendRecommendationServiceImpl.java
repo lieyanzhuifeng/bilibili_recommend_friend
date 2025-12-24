@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+/*使用了对象池模式*/
 //没有使用adapter时方法的具体实现
 @Slf4j
 @Service
@@ -26,6 +27,8 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final VideoRepository videoRepository;
+
+    private final BlockingQueue<FriendRecommendationDTO> dtoPool = new LinkedBlockingQueue<>(200); //对象池的定义
 
     // 配置参数
     private static final int MIN_COMMENT_LENGTH = 100; //评论最小长度
@@ -285,6 +288,7 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
     /**
      * 创建推荐DTO
      */
+    /*对象池中对象的获取*/
     private Optional<FriendRecommendationDTO> createRecommendationDTO(Comment userComment,
                                                                       Comment matchedComment,
                                                                       double matchScore) {
@@ -293,40 +297,43 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
             Optional<Video> videoOpt = videoRepository.findById(matchedComment.getVideoId());
 
             if (userOpt.isPresent() && videoOpt.isPresent()) {
-                FriendRecommendationDTO dto = new FriendRecommendationDTO(
-                        userComment,
-                        matchedComment,
-                        videoOpt.get(),
-                        userOpt.get(),
-                        matchScore
-                );
+                // 从池中尝试获取对象，如果池空了则 new 一个新的
+                FriendRecommendationDTO dto = dtoPool.poll();
+                if (dto == null) {
+                    dto = new FriendRecommendationDTO();
+                }
+
+                // 使用重置方法而不是构造函数
+                dto.reinitialize(userComment, matchedComment, videoOpt.get(), userOpt.get(), matchScore);
                 return Optional.of(dto);
             }
         } catch (Exception e) {
-            log.error("构建推荐DTO时发生错误，匹配评论ID: {}", matchedComment.getCommentId(), e);
+            log.error("构建推荐DTO时发生错误", e);
         }
-
         return Optional.empty();
     }
 
     /**
      * 处理并去重结果
      */
+    /*对象池中对象的归还*/
     private List<FriendRecommendationDTO> processAndDeduplicateResults(List<FriendRecommendationDTO> results) {
-        // 按匹配分数排序
         results.sort((r1, r2) -> Double.compare(r2.getMatchScore(), r1.getMatchScore()));
 
-        // 使用Set去重，基于用户ID
         Set<Long> processedUsers = new HashSet<>();
         List<FriendRecommendationDTO> finalResults = new ArrayList<>();
 
         for (FriendRecommendationDTO result : results) {
             Long userId = result.getRecommendedUser().getUserId();
+            // 只有被选入 finalResults 的才继续持有，其余的归还池子
             if (processedUsers.add(userId) && finalResults.size() < MAX_RESULTS) {
                 finalResults.add(result);
+            } else {
+                // 归还前清理引用，放回池中复用
+                result.clear();
+                dtoPool.offer(result);
             }
         }
-
         return finalResults;
     }
 
