@@ -30,7 +30,7 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
     // 配置参数
     private static final int MIN_COMMENT_LENGTH = 100; //评论最小长度
     private static final double MATCH_SCORE_THRESHOLD = 0.7; //匹配分数门槛
-    private static final int MAX_COMMENTS_PER_VIDEO = 50; //一个视频最多参与匹配的评论数
+    private static final int MAX_COMMENTS_PER_VIDEO = 1000; //一个视频最多参与匹配的评论数
     private static final int MAX_COMMENTS_PER_PERSON = 10; //一个用户最多参与匹配的评论数
     private static final int MAX_RESULTS = 10; //匹配结果最大值
     private static final int TIMEOUT_SECONDS = 30; //超时时间
@@ -230,22 +230,43 @@ public class CommentBasedFriendRecommendationServiceImpl implements CommentBased
     /**
      * 批量计算匹配分数（优化版）
      */
+    /**
+     * 批量计算匹配分数（支持自动分批处理，防止显存溢出）
+     */
     private List<Double> calculateMatchScoresBatch(String userCommentContent, List<Comment> targetComments) {
-        if (targetComments.isEmpty()) {
-            return Collections.emptyList();
-        }
+        if (targetComments.isEmpty()) return Collections.emptyList();
 
-        // 使用优化版的批量匹配分计算
+        // 定义每批处理的数量（建议 32-64 之间，根据服务器内存调整）
+        final int CHUNK_SIZE = 50;
+        List<Double> allScores = new ArrayList<>(targetComments.size());
+
         try {
-            List<String> commentContents = targetComments.stream()
+            // 提取所有评论内容
+            List<String> allContents = targetComments.stream()
                     .map(Comment::getContent)
                     .collect(Collectors.toList());
 
-            return CommentSimilarityWithSentiment.INSTANCE.batchMatchScore(userCommentContent, commentContents);
+            // 分批处理逻辑
+            for (int i = 0; i < allContents.size(); i += CHUNK_SIZE) {
+                // 计算当前批次的结束位置
+                int end = Math.min(i + CHUNK_SIZE, allContents.size());
+                List<String> chunk = allContents.subList(i, end);
+
+                log.debug("正在处理分批匹配: {} - {} / 总计 {}", i, end, allContents.size());
+
+                // 调用单例进行该批次的批量推理
+                List<Double> chunkScores = CommentSimilarityWithSentiment.INSTANCE.batchMatchScore(userCommentContent, chunk);
+
+                if (chunkScores != null) {
+                    allScores.addAll(chunkScores);
+                }
+            }
+
+            return allScores;
         } catch (Exception e) {
-            log.error("批量计算匹配分数失败", e);
-            // 返回全0列表
-            return targetComments.stream().map(c -> 0.0).collect(Collectors.toList());
+            log.error("分批计算匹配分数时发生异常", e);
+            // 出错时返回全 0 列表，确保后续流程不崩溃
+            return Collections.nCopies(targetComments.size(), 0.0);
         }
     }
 
