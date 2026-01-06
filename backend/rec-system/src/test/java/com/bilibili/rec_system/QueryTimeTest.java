@@ -27,7 +27,7 @@ public class QueryTimeTest {
         String sql = "SELECT " +
                 "CAST(totalWatchDuration AS CHAR) as originalTime, " +
                 "TIME_TO_SEC(totalWatchDuration) / 3600.0 as hours " +
-                "FROM user_up_stats LIMIT 30";
+                "FROM user_video_stats LIMIT 100";
 
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
 

@@ -8,14 +8,14 @@ import lombok.Setter;
 public class DeepVideoRecommendationDTO extends BaseDTO {
     private Long videoId;
     private String videoTitle;
-    private Integer totalWatchDuration;  // 总观看时长（秒）
+    private Double totalWatchDuration;  // 总观看时长（秒）
     private Integer watchCount;          // 观看次数
 
     public DeepVideoRecommendationDTO() {}
 
     public DeepVideoRecommendationDTO(Long userId, String username, String avatarPath,
                                       Long videoId, String videoTitle,
-                                      Integer totalWatchDuration, Integer watchCount) {
+                                      Double totalWatchDuration, Integer watchCount) {
         super(userId, username, avatarPath);
         this.videoId = videoId;
         this.videoTitle = videoTitle;

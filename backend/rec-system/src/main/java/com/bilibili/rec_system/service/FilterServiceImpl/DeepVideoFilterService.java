@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class DeepVideoFilterService implements FilterService {
@@ -47,25 +45,26 @@ public class DeepVideoFilterService implements FilterService {
      * 根据option选项筛选用户
      */
     public List<BaseDTO> filterUsersByOption(Long videoId, Integer option) {
-        List<UserVideoStats> statsList;
-
-        // 获取视频时长
-        LocalTime videoDuration = videoRepository.findDurationByVideoId(videoId);
-        if (videoDuration == null) {
+        // 获取视频时长（秒数）
+        LocalTime videoDurationTime = videoRepository.findDurationByVideoId(videoId);
+        if (videoDurationTime == null) {
             return new ArrayList<>();
         }
 
         // 将 LocalTime 转换为秒数
-        long videoDurationSeconds = convertToSeconds(videoDuration);
+        Double videoDurationSeconds = (double) convertToSeconds(videoDurationTime);
+        List<UserVideoStats> statsList;
 
         switch (option) {
             case 0: // 深度观看：观看次数≥5 或 观看时长≥2倍视频时长
-                LocalTime minDuration0 = secondsToLocalTime(videoDurationSeconds * 2);
-                statsList = userVideoStatsRepository.findByVideoIdAndMinCountOrDuration(videoId, 5, minDuration0);
+                Double minDuration0 = videoDurationSeconds * 2;
+                statsList = userVideoStatsRepository.findByVideoIdAndMinCountOrDuration(
+                        videoId, 5, secondsToLocalTime(minDuration0.longValue()));
                 break;
             case 1: // 极其深度观看：观看次数≥10 或 观看时长≥5倍视频时长
-                LocalTime minDuration1 = secondsToLocalTime(videoDurationSeconds * 5);
-                statsList = userVideoStatsRepository.findByVideoIdAndMinCountOrDuration(videoId, 10, minDuration1);
+                Double minDuration1 = videoDurationSeconds * 5;
+                statsList = userVideoStatsRepository.findByVideoIdAndMinCountOrDuration(
+                        videoId, 10, secondsToLocalTime(minDuration1.longValue()));
                 break;
             default:
                 statsList = new ArrayList<>();
@@ -81,8 +80,9 @@ public class DeepVideoFilterService implements FilterService {
      * @return 深度观看视频的DTO列表
      */
     public List<DeepVideoRecommendationDTO> show(Long userId) {
-        // 假设我们使用 option 0 的深度观看标准：观看次数≥5 或 观看时长≥2倍视频时长
+        // 深度观看标准：观看次数≥5 或 观看时长≥2倍视频时长
         final int MIN_WATCH_COUNT = 5;
+        final double MIN_DURATION_MULTIPLIER = 2.0;
 
         // 1. 获取用户所有的观看统计
         List<UserVideoStats> allStats = userVideoStatsRepository.findByUserId(userId);
@@ -90,41 +90,45 @@ public class DeepVideoFilterService implements FilterService {
             return new ArrayList<>();
         }
 
-        // 2. 筛选深度观看视频
-        List<DeepVideoRecommendationDTO> deepVideos = allStats.stream()
-                .filter(stats -> {
-                    Long videoId = stats.getVideoId();
-                    LocalTime videoDurationTime = videoRepository.findDurationByVideoId(videoId);
-                    if (videoDurationTime == null) {
-                        return false;
-                    }
+        List<DeepVideoRecommendationDTO> deepVideos = new ArrayList<>();
 
-                    long videoDurationSeconds = convertToSeconds(videoDurationTime);
-                    long minDurationSeconds = videoDurationSeconds * 2; // 2倍视频时长
-                    LocalTime minDurationTime = secondsToLocalTime(minDurationSeconds);
+        for (UserVideoStats stats : allStats) {
+            Long videoId = stats.getVideoId();
 
-                    return stats.getWatchCount() >= MIN_WATCH_COUNT || stats.getTotalWatchDuration().compareTo(minDurationTime) >= 0;
-                })
-                .map(stats -> {
-                    // 获取视频标题
-                    String videoTitle = getVideoTitle(stats.getVideoId());
-                    // 返回包含用户和视频信息的DTO。由于是查询当前用户，这里User信息固定为当前用户。
-                    User user = userRepository.findByUserId(userId);
-                    if (user != null) {
-                        return new DeepVideoRecommendationDTO(
-                                user.getUserId(),
-                                user.getUsername(),
-                                user.getAvatarPath(),
-                                stats.getVideoId(),
-                                videoTitle,
-                                convertToSeconds(stats.getTotalWatchDuration()),
-                                stats.getWatchCount()
-                        );
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            // 获取视频时长
+            LocalTime videoDurationTime = videoRepository.findDurationByVideoId(videoId);
+            if (videoDurationTime == null) {
+                continue;
+            }
+
+            // 计算最小时长要求（秒数）
+            Double videoDurationSeconds = (double) convertToSeconds(videoDurationTime);
+            Double minDurationSeconds = videoDurationSeconds * MIN_DURATION_MULTIPLIER;
+
+            // 判断是否满足深度观看条件
+            boolean isDeepWatch = stats.getWatchCount() >= MIN_WATCH_COUNT ||
+                    (stats.getTotalWatchDuration() != null &&
+                            stats.getTotalWatchDuration() >= minDurationSeconds);
+
+            if (isDeepWatch) {
+                // 获取视频标题
+                String videoTitle = getVideoTitle(videoId);
+                // 获取用户信息
+                User user = userRepository.findByUserId(userId);
+                if (user != null) {
+                    DeepVideoRecommendationDTO dto = new DeepVideoRecommendationDTO(
+                            user.getUserId(),
+                            user.getUsername(),
+                            user.getAvatarPath(),
+                            videoId,
+                            videoTitle,
+                            stats.getTotalWatchDuration(),
+                            stats.getWatchCount()
+                    );
+                    deepVideos.add(dto);
+                }
+            }
+        }
 
         return deepVideos;
     }
@@ -133,27 +137,32 @@ public class DeepVideoFilterService implements FilterService {
      * 转换为DTO
      */
     private List<BaseDTO> convertToDTO(List<UserVideoStats> statsList, Long videoId) {
+        List<BaseDTO> result = new ArrayList<>();
+
+        if (statsList.isEmpty()) {
+            return result;
+        }
+
         // 获取视频标题
         String videoTitle = getVideoTitle(videoId);
 
-        return statsList.stream()
-                .map(stats -> {
-                    User user = userRepository.findByUserId(stats.getUserId());
-                    if (user != null) {
-                        return new DeepVideoRecommendationDTO(
-                                user.getUserId(),
-                                user.getUsername(),
-                                user.getAvatarPath(),
-                                videoId,
-                                videoTitle,
-                                convertToSeconds(stats.getTotalWatchDuration()),
-                                stats.getWatchCount()
-                        );
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        for (UserVideoStats stats : statsList) {
+            User user = userRepository.findByUserId(stats.getUserId());
+            if (user != null) {
+                DeepVideoRecommendationDTO dto = new DeepVideoRecommendationDTO(
+                        user.getUserId(),
+                        user.getUsername(),
+                        user.getAvatarPath(),
+                        videoId,
+                        videoTitle,
+                        stats.getTotalWatchDuration(),
+                        stats.getWatchCount()
+                );
+                result.add(dto);
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -169,20 +178,20 @@ public class DeepVideoFilterService implements FilterService {
     }
 
     /**
-     * 秒数转换为LocalTime
+     * 秒数（Long）转换为LocalTime
      */
     private LocalTime secondsToLocalTime(long totalSeconds) {
         int hours = (int) (totalSeconds / 3600);
         int minutes = (int) ((totalSeconds % 3600) / 60);
-        int seconds = (int) (totalSeconds % 60);
-        return LocalTime.of(hours, minutes, seconds);
+        int secs = (int) (totalSeconds % 60);
+        return LocalTime.of(hours, minutes, secs);
     }
 
     /**
      * LocalTime转换为秒数
      */
-    private int convertToSeconds(LocalTime time) {
+    private long convertToSeconds(LocalTime time) {
         if (time == null) return 0;
-        return time.getHour() * 3600 + time.getMinute() * 60 + time.getSecond();
+        return time.getHour() * 3600L + time.getMinute() * 60L + time.getSecond();
     }
 }

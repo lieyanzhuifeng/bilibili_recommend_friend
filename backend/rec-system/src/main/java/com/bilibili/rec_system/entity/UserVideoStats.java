@@ -24,5 +24,5 @@ public class UserVideoStats {
     private Integer watchCount = 0;
 
     @Column(name = "totalWatchDuration")
-    private LocalTime totalWatchDuration;
+    private Double totalWatchDuration;
 }
