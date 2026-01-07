@@ -130,8 +130,8 @@ public class FollowTimeRecommendationService implements FilterService {
      * 生成推荐理由
      */
     private String generateRecommendationReason(int userFollowDays, int timeDifference, String upName) {
-        return String.format("你们关注%s相差%d天，你关注了该%s%d天了",
-                upName, timeDifference, upName, userFollowDays);
+        return String.format("你们关注%s相差%d天，你关注了该up主%d天了",
+                upName, timeDifference, userFollowDays);
     }
 
     /**

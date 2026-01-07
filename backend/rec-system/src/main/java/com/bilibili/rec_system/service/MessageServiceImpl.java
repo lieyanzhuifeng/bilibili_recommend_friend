@@ -2,8 +2,7 @@ package com.bilibili.rec_system.service;
 
 import com.bilibili.rec_system.entity.Message;
 import com.bilibili.rec_system.repository.MessageRepository;
-import com.bilibili.rec_system.service.MessageService;
-import com.bilibili.rec_system.service.network.NetworkMessageService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +18,72 @@ public class MessageServiceImpl implements MessageService {
     @Autowired
     private MessageRepository messageRepository;
     
-    @Autowired
-    private NetworkMessageService networkMessageService;
+
+
+//    @Override
+//    public boolean sendMessage(Long senderId, Long receiverId, String content) {
+//        try {
+//            // 参数验证
+//            if (senderId == null || receiverId == null || content == null || content.trim().isEmpty()) {
+//                System.err.println("发送消息参数无效: senderId=" + senderId + ", receiverId=" + receiverId);
+//                return false;
+//            }
+//
+//            // 创建消息对象
+//            Message message = new Message();
+//            message.setSenderId(senderId);
+//            message.setReceiverId(receiverId);
+//            message.setContent(content.trim());
+//            message.setSendTime(LocalDateTime.now());
+//
+//            // 获取接收方网络地址和端口
+//            String receiverAddress = getReceiverAddress(receiverId);
+//            int receiverPort = getReceiverPort(receiverId);
+//
+//            // 尝试通过网络包直接发送给接收方
+//            boolean sentOverNetwork = false;
+//            if (receiverAddress != null && receiverPort > 0) {
+//                try {
+//                    sentOverNetwork = networkMessageService.sendMessageOverNetwork(message, receiverAddress, receiverPort);
+//                    if (sentOverNetwork) {
+//                        System.out.println("消息已成功通过网络发送给接收方: " + receiverId);
+//                    } else {
+//                        System.err.println("通过网络发送消息失败，将仅保存到数据库");
+//                    }
+//                } catch (Exception networkException) {
+//                    System.err.println("网络发送过程中发生异常: " + networkException.getMessage());
+//                    networkException.printStackTrace();
+//                    // 继续执行，将消息保存到数据库
+//                }
+//            } else {
+//                System.err.println("无法获取接收方网络地址或端口，将仅保存到数据库");
+//            }
+//
+//            // 将消息保存到数据库用于事后验证
+//            // 这样即使网络发送失败，消息也不会丢失
+//            try {
+//                messageRepository.save(message);
+//                System.out.println("消息已保存到数据库，用于事后验证");
+//            } catch (Exception dbException) {
+//                System.err.println("保存消息到数据库失败: " + dbException.getMessage());
+//                dbException.printStackTrace();
+//                // 如果网络发送也失败了，且数据库保存也失败了，则整个发送过程失败
+//                return sentOverNetwork; // 如果网络发送成功则返回true，否则返回false
+//            }
+//
+//            // 返回网络发送的结果
+//            // 在实际应用中，您可能想要不同的逻辑：
+//            // 1. 只要数据库保存成功就返回true（保证消息不丢失）
+//            // 2. 网络发送和数据库保存都成功才返回true（保证即时性和持久性）
+//            // 3. 网络发送成功就返回true（优先考虑即时性）
+//            return sentOverNetwork;
+//
+//        } catch (Exception e) {
+//            System.err.println("发送消息过程中发生未预期的异常: " + e.getMessage());
+//            e.printStackTrace();
+//            return false;
+//        }
+//    }
 
     @Override
     public boolean sendMessage(Long senderId, Long receiverId, String content) {
@@ -31,6 +94,13 @@ public class MessageServiceImpl implements MessageService {
                 return false;
             }
 
+            // 可选：检查发送者和接收者是否是同一个用户
+            if (senderId.equals(receiverId)) {
+                System.out.println("用户给自己发送消息: " + content);
+                // 可以根据业务需求决定是否允许自己给自己发消息
+                // return false; // 如果不允许，返回false
+            }
+
             // 创建消息对象
             Message message = new Message();
             message.setSenderId(senderId);
@@ -38,47 +108,25 @@ public class MessageServiceImpl implements MessageService {
             message.setContent(content.trim());
             message.setSendTime(LocalDateTime.now());
 
-            // 获取接收方网络地址和端口
-            String receiverAddress = getReceiverAddress(receiverId);
-            int receiverPort = getReceiverPort(receiverId);
-            
-            // 尝试通过网络包直接发送给接收方
-            boolean sentOverNetwork = false;
-            if (receiverAddress != null && receiverPort > 0) {
-                try {
-                    sentOverNetwork = networkMessageService.sendMessageOverNetwork(message, receiverAddress, receiverPort);
-                    if (sentOverNetwork) {
-                        System.out.println("消息已成功通过网络发送给接收方: " + receiverId);
-                    } else {
-                        System.err.println("通过网络发送消息失败，将仅保存到数据库");
-                    }
-                } catch (Exception networkException) {
-                    System.err.println("网络发送过程中发生异常: " + networkException.getMessage());
-                    networkException.printStackTrace();
-                    // 继续执行，将消息保存到数据库
-                }
-            } else {
-                System.err.println("无法获取接收方网络地址或端口，将仅保存到数据库");
-            }
-
-            // 将消息保存到数据库用于事后验证
-            // 这样即使网络发送失败，消息也不会丢失
+            // 只保存到数据库（移除了所有网络相关代码）
             try {
-                messageRepository.save(message);
-                System.out.println("消息已保存到数据库，用于事后验证");
+                Message savedMessage = messageRepository.save(message);
+
+                if (savedMessage != null && savedMessage.getMessageId() != null) {
+                    System.out.println("消息发送成功并保存到数据库！消息ID: " + savedMessage.getMessageId());
+
+
+
+                    return true;
+                } else {
+                    System.err.println("消息保存失败，返回的Message对象为空或没有ID");
+                    return false;
+                }
             } catch (Exception dbException) {
                 System.err.println("保存消息到数据库失败: " + dbException.getMessage());
                 dbException.printStackTrace();
-                // 如果网络发送也失败了，且数据库保存也失败了，则整个发送过程失败
-                return sentOverNetwork; // 如果网络发送成功则返回true，否则返回false
+                return false;
             }
-            
-            // 返回网络发送的结果
-            // 在实际应用中，您可能想要不同的逻辑：
-            // 1. 只要数据库保存成功就返回true（保证消息不丢失）
-            // 2. 网络发送和数据库保存都成功才返回true（保证即时性和持久性）
-            // 3. 网络发送成功就返回true（优先考虑即时性）
-            return sentOverNetwork;
 
         } catch (Exception e) {
             System.err.println("发送消息过程中发生未预期的异常: " + e.getMessage());
@@ -86,6 +134,7 @@ public class MessageServiceImpl implements MessageService {
             return false;
         }
     }
+
 
     @Override
     public List<Message> getRecentChat(Long user1, Long user2, int limit) {

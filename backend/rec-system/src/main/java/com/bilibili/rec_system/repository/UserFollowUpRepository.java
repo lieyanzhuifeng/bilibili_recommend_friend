@@ -26,6 +26,8 @@ public interface UserFollowUpRepository extends JpaRepository<UserFollowUp, Long
     @Query("SELECT DATEDIFF(CURRENT_DATE, ufu.followTime) FROM UserFollowUp ufu WHERE ufu.userId = :userId AND ufu.upId = :upId")
     Integer findFollowDaysByUserAndUP(@Param("userId") Long userId, @Param("upId") Long upId);
 
+
+
     // 查找关注了某个UP主的所有其他用户
     @Query("SELECT ufu.userId FROM UserFollowUp ufu WHERE ufu.upId = :upId AND ufu.userId <> :excludeUserId")
     List<Long> findUsersByUpIdExcludingUser(@Param("upId") Long upId, @Param("excludeUserId") Long excludeUserId);
