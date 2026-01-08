@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
+//这个包使用责任链模式将筛选和推荐功能串联起来，这个类是设置工作流程
 @Service
 public class FilterRecommendChainService {
 

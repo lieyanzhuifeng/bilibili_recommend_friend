@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
+//策略模式的具体实现
 @Service
 public class UserActivityRecommendationService implements FilterService {
 

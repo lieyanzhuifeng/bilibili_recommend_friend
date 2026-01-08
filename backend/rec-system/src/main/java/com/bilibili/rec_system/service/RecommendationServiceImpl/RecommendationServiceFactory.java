@@ -24,6 +24,7 @@ public class RecommendationServiceFactory {
     private CommonUpRecommendationService commonUpRecommendationService;
     @Autowired
     private FavoriteSimilarityService favoriteSimilarityService;
+    //适配器调用处
     @Autowired
     private CommentBasedFriendRecommendationServiceAdapter commentFriendAdapter;
     public RecommendationService getRecommendationService(String type) {

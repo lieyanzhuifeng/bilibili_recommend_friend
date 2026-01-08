@@ -1,6 +1,6 @@
 // Handler.java
 package com.bilibili.rec_system.service.recommend_filter;
-
+//这个抽象类定义了对request可以进行的操作，他有三个子类
 public abstract class Handler {
 
     private Handler nextHandler;

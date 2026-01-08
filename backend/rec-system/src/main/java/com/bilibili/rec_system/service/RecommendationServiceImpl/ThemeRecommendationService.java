@@ -139,7 +139,7 @@ public class ThemeRecommendationService implements RecommendationService {
         public double getScore() { return score; }
         public List<String> getCommonThemeNames() { return commonThemeNames; }
     }
-
+    //不同的子系统的数据，都向外暴露一个show接口
     public Map<String, Double> show(Long userId) {
         // 获取用户的主题偏好
         List<UserTopTheme> userThemes = userTopThemeRepository.findTop3ByUserId(userId);

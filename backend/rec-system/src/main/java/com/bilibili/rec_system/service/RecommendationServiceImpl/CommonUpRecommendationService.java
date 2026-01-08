@@ -108,7 +108,7 @@ public class CommonUpRecommendationService implements RecommendationService {
                 })
                 .collect(Collectors.toList());
     }
-
+    //不同的子系统的数据，都向外暴露一个show接口
     public List<Map<String, Object>> show(Long userId) {
         // 获取用户关注的所有UP主ID
         List<Long> upIds = userFollowUpRepository.findUpIdsByUserId(userId);

@@ -105,7 +105,7 @@ public class UserBehaviorRecommendationService implements RecommendationService 
 
         return dotProduct / (norm1 * norm2);
     }
-
+    //不同的子系统的数据，都向外暴露一个show接口
     public Map<String, Object> show(Long userId) {
         UserStatistics userStats = userStatisticsRepository.findByUserId(userId);
 

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+//策略模式的具体实现
 @Service
 public class SeriesFilterService implements FilterService {
 

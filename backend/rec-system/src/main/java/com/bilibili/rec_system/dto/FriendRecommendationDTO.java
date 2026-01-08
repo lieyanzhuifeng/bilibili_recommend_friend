@@ -6,7 +6,7 @@ import com.bilibili.rec_system.entity.Video;
 
 import java.io.Serializable;
 import java.util.Objects;
-
+/*使用了对象池模式的对象*/
 public class FriendRecommendationDTO extends BaseDTO implements Serializable {
     private Comment userComment;        // 用户自己的评论（新增）
     private Comment matchedComment;     // 匹配到的其他用户评论
@@ -66,6 +66,30 @@ public class FriendRecommendationDTO extends BaseDTO implements Serializable {
 
     public void setMatchScore(double matchScore) {
         this.matchScore = matchScore;
+    }
+
+
+    /**
+     * 对象池重用方法：重新初始化对象状态
+     */
+    public void reinitialize(Comment userComment, Comment matchedComment,
+                             Video video, User recommendedUser, double matchScore) {
+        this.userComment = userComment;
+        this.matchedComment = matchedComment;
+        this.video = video;
+        this.recommendedUser = recommendedUser;
+        this.matchScore = matchScore;
+    }
+
+    /**
+     * 清理方法：归还池子前断开引用，防止内存泄漏（有助于GC回收关联的大对象）
+     */
+    public void clear() {
+        this.userComment = null;
+        this.matchedComment = null;
+        this.video = null;
+        this.recommendedUser = null;
+        this.matchScore = 0.0;
     }
 
     @Override
