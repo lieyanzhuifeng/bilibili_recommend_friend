@@ -1,0 +1,25 @@
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Documentary
+Drama
+Family
+Fantasy
+History
+Horror
+Music
+Musical
+Mystery
+NOT AVAILABLE
+News
+Reality-TV
+Romance
+Sci-Fi
+Short
+Sport
+Thriller
+War
+Western
